@@ -30,132 +30,56 @@ export const FEATURES: Feature[] = [
   {
     key: 'i18n',
     label: '多语言 i18n',
-    hint: '不勾选则只保留中文：删除语言切换卡片与 en-US 语言包（i18n 运行时是 navbar / tabbar / store 的依赖，会保留）',
+    hint: '多语言国际化支持；不勾选则彻底删除 lime-i18n 插件与 src/i18n 目录，保留纯中文轻量环境',
     default: true,
     removePaths: [
-      'src/pages/basic/components/LangSwitchCard.uvue',
-      'src/i18n/locales/en-US.json',
-    ],
-    patches: dropCardFromView(BASIC_VIEW, 'LangSwitchCard', 'LangSwitchCard.uvue'),
-    replacements: [
-      {
-        file: 'src/i18n/index.uts',
-        from: 'import enUS from \'./locales/en-US.json\';',
-        to: '',
-        label: '移除 en-US 语言包导入',
-      },
-      {
-        file: 'src/i18n/index.uts',
-        from: '\'en-US\': enUS as UTSJSONObject',
-        to: '',
-        label: '移除 en-US 消息注册',
-      },
-      {
-        file: 'src/i18n/index.uts',
-        from: 'fallbackLocale: \'en-US\',',
-        to: 'fallbackLocale: \'zh-CN\',',
-        label: 'fallbackLocale 回落到 zh-CN',
-      },
-    ],
-  },
-  {
-    key: 'theme',
-    label: '主题配置（暗黑模式切换卡片）',
-    hint: '不勾选则移除主题切换演示卡片；theme.json 与 src/utils/theme 是骨架依赖，会保留',
-    default: true,
-    removePaths: ['src/pages/basic/components/ThemeSwitchCard.uvue'],
-    patches: dropCardFromView(BASIC_VIEW, 'ThemeSwitchCard', 'ThemeSwitchCard.uvue'),
-  },
-  {
-    key: 'auth',
-    label: '登录鉴权 + 路由守卫',
-    hint: '登录/注册页、自研路由拦截器、401 跳登录、我的页登录态；不勾选则替换为无登录版「我的」页',
-    default: true,
-    removePaths: [
-      'src/sub/auth',
-      'src/router',
-      'src/pages/basic/components/RouterDemoCard.uvue',
-    ],
-    patches: [
-      // main.uts：摘掉拦截器安装
-      {
-        file: 'main.uts',
-        start: 'import { installRouteInterceptor } from \'./src/router/interceptor\';',
-        label: 'main.uts 移除拦截器 import',
-      },
-      {
-        file: 'main.uts',
-        start: 'installRouteInterceptor();',
-        label: 'main.uts 移除拦截器安装调用',
-      },
-      // App.uvue：摘掉直达链接守卫
-      {
-        file: 'App.uvue',
-        start: 'import { checkDirectEntry } from \'./src/router/interceptor\';',
-        label: 'App.uvue 移除 checkDirectEntry import',
-      },
-      {
-        file: 'App.uvue',
-        start: 'onShow((options?) => {',
-        end: '});',
-        label: 'App.uvue 移除 onShow 直达守卫块',
-      },
-      // request.uts：401 与业务码不再跳登录
-      {
-        file: 'src/http/request.uts',
-        start: 'import { toLoginPage } from \'../router/toLoginPage\';',
-        label: 'request.uts 移除 toLoginPage import',
-      },
-      {
-        file: 'src/http/request.uts',
-        start: 'toLoginPage({ mode: \'reLaunch\' } as UTSJSONObject);',
-        occurrence: 'many',
-        label: 'request.uts 移除 401 / 业务码跳登录调用',
-      },
-      ...dropCardFromView(BASIC_VIEW, 'RouterDemoCard', 'RouterDemoCard.uvue'),
+      'src/i18n',
+      'uni_modules/lime-i18n',
     ],
     replaceFiles: {
-      'src/pages/me/views/MeView.uvue': 'no-auth/MeView.uvue',
+      'src/utils/i18n/index.uts': 'no-i18n/i18n-utils.uts',
+      'src/store/vapor/app.ts': 'no-i18n/vapor-app.ts',
+      'src/store/vdom/app.uts': 'no-i18n/vdom-app.uts',
     },
-    replacements: [
+    patches: [
+      // main.uts 移除 i18n
       {
-        file: 'CLAUDE.md',
-        from: '鉴权头 / 业务码判定 / 401 跳登录都在 `src/http/request.uts` 的拦截器里',
-        to: '鉴权头 / 业务码判定都在 `src/http/request.uts` 的拦截器里（本项目未启用登录鉴权，401 不跳转，需自行处理）',
-        label: 'CLAUDE.md 修正 401 跳登录的说明',
+        file: 'main.uts',
+        start: 'import i18n from \'./src/i18n\';',
+        optional: true,
+        label: 'main.uts 移除 i18n import',
+      },
+      {
+        file: 'main.uts',
+        start: 'app.use(i18n);',
+        optional: true,
+        label: 'main.uts 移除 app.use(i18n)',
       },
     ],
   },
   {
     key: 'echarts',
     label: 'ECharts 图表',
-    hint: 'e-chart 组件（内置 echarts.min.js）与功能页图表卡片；不勾选则一并清理 easycom 注册',
+    hint: 'e-chart 组件（内置 echarts.min.js）；不勾选则裁剪 uni_modules/e-chart 插件',
     default: true,
     removePaths: [
       'uni_modules/e-chart',
-      'src/pages/function/components/EchartsDemoCard.uvue',
-    ],
-    patches: [
-      {
-        file: FUNCTION_VIEW,
-        start: 'import EchartsDemoCard from \'../components/EchartsDemoCard.uvue\';',
-        label: '删除 EchartsDemoCard 的 import',
-      },
-      {
-        file: FUNCTION_VIEW,
-        start: '<EchartsDemoCard v-if="isCanvasReady" />',
-        label: '删除 <EchartsDemoCard /> 标签',
-      },
     ],
   },
 ]
 
 /**
- * 非核心特性资产（AI 对话页、Skills 框架、文档工程、Docker 部署）
- * 不再作为可选特性，默认全部自动裁剪，确保项目轻量纯粹
+ * 核心非必要特性与演示卡片资产
+ * 基础页与功能页重置为纯净空白视图，默认清理所有演示 Card 组件与非核心资产
  */
 export const ALWAYS_PRUNE_FEATURE_ASSETS = {
   removePaths: [
+    'uni_modules/lime-icon',
+    'uni_modules/lime-shared',
+    'uni_modules/lime-style',
+    'uni_modules/uni-scss',
+    'src/pages/basic/components',
+    'src/pages/function/components',
     'src/pages/ai',
     '.claude',
     '.agents',
@@ -175,10 +99,22 @@ export const ALWAYS_PRUNE_FEATURE_ASSETS = {
       file: 'src/tabbar/internal/navigate.uts',
       from: '\'/src/pages/ai/ai\'',
       to: '\'/src/pages/index/index\'',
+      optional: true,
       label: 'tabbar 兜底跳转从 AI 页改为首页',
+    },
+    {
+      file: 'uni_modules/uni-icons/package.json',
+      from: `"dependencies": [
+      "uni-scss"
+    ]`,
+      to: '"dependencies": []',
+      optional: true,
+      label: 'uni-icons 移除对已删除 uni-scss 的依赖',
     },
   ],
   replaceFiles: {
+    'src/pages/basic/views/BasicView.uvue': 'clean-pages/BasicView.uvue',
+    'src/pages/function/views/FunctionView.uvue': 'clean-pages/FunctionView.uvue',
     'CLAUDE.md': 'no-skills/CLAUDE.md',
     'AGENTS.md': 'no-skills/AGENTS.md',
     'README.md': 'minimal/README.md',

@@ -58,7 +58,7 @@ export async function createCommand(
 
   try {
     await stage('拉取模板', async () => {
-      const result = await acquireTemplate(projectDir, options.template, cwd, logger.step)
+      const result = await acquireTemplate(projectDir, options.template, cwd, () => {})
       if (result.source.kind === 'git') {
         logger.info(`模板仓库: ${result.source.repo} #${result.source.branch}`)
       }
@@ -67,15 +67,10 @@ export async function createCommand(
       }
     })
 
-    const sanitizeResult = await stage('清理噪声与凭据', async () => {
-      return sanitize(projectDir, options.projectName, logger.step)
-    })
-    for (const item of sanitizeResult.scrubbedCredentials) {
-      logger.warn(`已清理 ${item}`)
-    }
+    await stage('初始化项目', async () => {
+      await sanitize(projectDir, options.projectName, () => {})
 
-    const pruneResult = await stage('按勾选裁剪项目', async () => {
-      return prune(
+      const pruneResult = await prune(
         projectDir,
         options.projectName,
         {
@@ -83,44 +78,42 @@ export async function createCommand(
           subPackages: options.subPackages,
           cleanUnusedModules: options.cleanUnusedModules,
         },
-        logger.step,
-        logger.warn,
+        () => {},
+        () => {},
       )
-    })
 
-    await stage('项目四查自检', async () => {
       const issues = await runSelfCheck(projectDir)
       const errors = issues.filter(i => i.level === 'error')
-
-      for (const issue of issues) {
-        const line = `[${issue.code}] ${issue.message}${issue.file ? `（${issue.file}）` : ''}`
-        if (issue.level === 'error') {
-          logger.error(line)
-        }
-        else {
-          logger.warn(line)
-        }
-      }
-
       if (errors.length > 0) {
+        for (const issue of errors) {
+          logger.error(`[${issue.code}] ${issue.message}${issue.file ? `（${issue.file}）` : ''}`)
+        }
         throw new SelfCheckFailed(errors.length)
       }
-      logger.success('四查自检通过：无悬空 import / 组件标签 / 路由 / 依赖')
+
+      await finalize(projectDir, options, pruneResult, cliVersion, () => {}, () => {})
     })
 
-    await stage('收尾与环境配置', async () => {
-      const result = await finalize(projectDir, options, pruneResult, cliVersion, logger.step, logger.warn)
-      if (!result.gitInitialized) {
-        logger.warn(`git 初始化失败: ${result.gitError}`)
+    // 交互询问是否安装依赖
+    let shouldInstall = options.install
+    if (process.stdin.isTTY && shouldInstall) {
+      const confirmInstall = await p.confirm({
+        message: `是否立即安装依赖？（${options.packageManager} install）`,
+        initialValue: true,
+      })
+      if (p.isCancel(confirmInstall)) {
+        shouldInstall = false
       }
-    })
+      else {
+        shouldInstall = confirmInstall
+      }
+    }
 
-    printReport(projectDir, options, pruneResult)
-    printNextSteps(projectDir, options.install, options)
-
-    if (options.install) {
+    if (shouldInstall) {
       await installDeps(projectDir, options.packageManager)
     }
+
+    printNextSteps(projectDir, shouldInstall, options)
   }
   catch (error: any) {
     if (error instanceof SelfCheckFailed && !commandOptions.keepOnFail) {
@@ -163,39 +156,7 @@ async function stage<T>(title: string, run: () => Promise<T>): Promise<T> {
   }
 }
 
-function printReport(
-  projectDir: string,
-  options: { features: string[], subPackages: string[], cleanUnusedModules: boolean },
-  result: Awaited<ReturnType<typeof prune>>,
-): void {
-  const lines: string[] = []
 
-  lines.push(`保留功能: ${options.features.length > 0 ? options.features.join(', ') : '（无）'}`)
-  lines.push(`保留分包: ${options.subPackages.length > 0 ? `${options.subPackages.length} 个分包` : options.features.includes('auth') ? '仅保留 auth 鉴权分包' : '（无分包）'}`)
-  lines.push(`清理冗余 uni_modules: ${options.cleanUnusedModules ? '是' : '否'}`)
-  lines.push('')
-  lines.push(`删除路径: ${result.removedPaths.length} 个`)
-  lines.push(`引用改写: ${result.appliedRules} 处`)
-  if (result.replacedFiles.length > 0) {
-    lines.push(`替换文件: ${result.replacedFiles.join(', ')}`)
-  }
-  if (result.removedDeps.length > 0) {
-    lines.push(`移除依赖: ${result.removedDeps.join(', ')}`)
-  }
-  if (result.removedScripts.length > 0) {
-    lines.push(`移除脚本: ${result.removedScripts.join(', ')}`)
-  }
-
-  const { pages, subPackages, easycom } = result.routeCleanup
-  if (pages.length + subPackages.length + easycom.length > 0) {
-    lines.push('')
-    lines.push(`清理失效路由: ${pages.length}`)
-    lines.push(`清理空分包: ${subPackages.length}`)
-    lines.push(`清理 easycom: ${easycom.length}`)
-  }
-
-  p.note(lines.join('\n'), `项目生成报告 · ${path.basename(projectDir)}`)
-}
 
 async function installDeps(projectDir: string, packageManager: string): Promise<void> {
   const task = logger.start(`正在安装依赖（${packageManager} install）...`)

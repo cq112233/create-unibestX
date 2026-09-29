@@ -44,11 +44,13 @@ function parseList(raw: string, allAllowed: string[]): string[] {
     return [...allAllowed]
   }
   const wanted = value.split(',').map(s => s.trim()).filter(Boolean)
-  const unknown = wanted.filter(k => !allAllowed.includes(k))
+  // 容错已内置或已清理的特性（如 auth、theme）
+  const validWanted = wanted.filter(k => allAllowed.includes(k))
+  const unknown = wanted.filter(k => !allAllowed.includes(k) && k !== 'auth' && k !== 'theme')
   if (unknown.length > 0) {
     throw new Error(`未知取值: ${unknown.join(', ')}（可选: ${allAllowed.join(', ')}, none, all）`)
   }
-  return wanted
+  return validWanted
 }
 
 function guard(value: unknown): asserts value {
@@ -116,6 +118,7 @@ export async function promptCreateOptions(
   cwd: string,
   flags: CliFlags,
 ): Promise<CreateOptions> {
+  const featureKeys = FEATURES.map(f => f.key)
   const subDirs = SUB_PACKAGES.map(s => s.dir)
   const fromFlags = optionsFromFlags(flags)
   if (fromFlags) {
@@ -151,7 +154,7 @@ export async function promptCreateOptions(
       projectName: deriveProjectName(rawName),
       targetDir: rawName,
       uiLibrary,
-      features: FEATURES.filter(f => f.default).map(f => f.key),
+      features: flags.features ? parseList(flags.features, featureKeys) : FEATURES.filter(f => f.default).map(f => f.key),
       subPackages: flags.subs ? parseList(flags.subs, subDirs) : [],
       cleanUnusedModules: !flags.keepUnusedModules,
       template,
@@ -221,7 +224,7 @@ export async function promptCreateOptions(
     defaultTemplate = 'main'
   }
 
-  // 3. 功能特性勾选（仅保留核心 4 样）
+  // 3. 功能特性勾选（i18n、主题、ECharts；登录鉴权与路由守卫为核心底座永久内置）
   const selectedFeatures = await p.multiselect({
     message: '选择需要内置的功能特性（空格切换，回车确认）',
     options: FEATURES.map(f => ({
@@ -283,6 +286,6 @@ export function printNextSteps(
   p.note(lines.join('\n'), '🎉 快速开始 / Next Steps')
 
   p.log.info(
-    `${cyan('提示:')} 运行 CLI 命令前，请确保已启动 ${yellow('HBuilderX (推荐 5.21+ / 5.24)')}，CLI 本质是驱动 HBuilderX 完成跨端编译。`,
+    `欢迎使用 unibestX！提示: 运行 CLI 命令前，请确保已启动 ${yellow('HBuilderX (推荐 5.21+ / 5.24)')}，CLI 本质是驱动 HBuilderX 完成跨端编译。`,
   )
 }

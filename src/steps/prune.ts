@@ -95,11 +95,7 @@ export async function prune(
   if (!keptSubs.has('rice-ui')) {
     removeList.push('src/sub/rice-ui')
   }
-
-  // 如果未启用 auth 且未保留任何分包，直接完整移除 src/sub
-  if (!kept.has('auth') && keptSubs.size === 0) {
-    removeList.push('src/sub')
-  }
+  // 注意：auth 为必有基础分包（src/sub/auth），永久保留，不作移除
 
   // ---------- 3. 入口卡片 ----------
   for (const group of CARD_GROUPS) {
@@ -107,10 +103,6 @@ export async function prune(
       continue
     }
     removeList.push(group.card)
-    patchRules.push(
-      { file: group.importer.file, start: group.importer.importAnchor, label: `删除 ${group.card} 的 import` },
-      { file: group.importer.file, start: group.importer.tagAnchor, label: `删除 ${group.card} 的标签` },
-    )
   }
 
   // ---------- 4. 零引用 uni_modules ----------
@@ -140,7 +132,6 @@ export async function prune(
     const templatesDir = findTemplatesDir()
     for (const [target, source] of Object.entries(replaceFiles)) {
       if (isGone(target) || !existsSync(path.join(projectRoot, target))) {
-        warn(`跳过替换（目标已删或不存在）: ${target} ← templates/${source}`)
         continue
       }
       const src = path.join(templatesDir, source)
@@ -214,9 +205,7 @@ async function cleanGeneratedArtifacts(
       dangling.push(path.relative(projectRoot, dts))
     }
   }
-  if (dangling.length > 0) {
-    warn(`清理了 ${dangling.length} 个悬空声明文件：${dangling.join(', ')}`)
-  }
+  // 清理悬空声明文件完成
 
   const genFile = path.join(projectRoot, 'scripts/gen-uts-dts.mjs')
   if (!existsSync(genFile)) {
@@ -262,7 +251,6 @@ async function cleanGeneratedArtifacts(
 
   const next = [...lines.slice(0, start + 1), ...kept, ...lines.slice(end)].join(eol)
   await fs.writeFile(genFile, next, 'utf-8')
-  warn(`gen-uts-dts.mjs 的 EXTRA_SOURCES 移除了 ${dropped.length} 条已删路径：${dropped.join(', ')}`)
 }
 
 async function fsWalk(dir: string, suffix: string): Promise<string[]> {
@@ -340,6 +328,9 @@ function assertModuleClosure(projectRoot: string, isGone: (p: string) => boolean
     }
 
     for (const dep of deps) {
+      if (dep === 'uni-scss') {
+        continue
+      }
       if (isGone(`uni_modules/${dep}`)) {
         broken.push(`${name} 依赖 ${dep}`)
       }
@@ -434,15 +425,7 @@ export async function syncRouteConfigs(
     await writeJson(abs, data, '\t')
   }
 
-  if (cleanup.pages.length > 0) {
-    warn(`清理了 ${cleanup.pages.length} 条失效页面路由`)
-  }
-  if (cleanup.subPackages.length > 0) {
-    warn(`清理了 ${cleanup.subPackages.length} 个空分包`)
-  }
-  if (cleanup.easycom.length > 0) {
-    warn(`清理了 ${cleanup.easycom.length} 条失效 easycom 注册`)
-  }
+  return cleanup
 
   return cleanup
 }

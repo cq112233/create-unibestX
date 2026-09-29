@@ -187,7 +187,6 @@ export async function applyPatches(
 
       if (starts.length === 0) {
         if (rule.optional) {
-          warn(`跳过（锚点未命中）: ${file} ← ${rule.label ?? rule.start}`)
           outcomes.push({ file, label: rule.label ?? rule.start, removedLines: 0, skipped: true })
           continue
         }

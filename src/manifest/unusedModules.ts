@@ -42,6 +42,11 @@ export const UNUSED_MODULES: string[] = [
   'lime-qrcode',
   /** 组件仅在孤儿文件 SignatureCard.uvue 里被引用 */
   'lime-signature',
+  /** 纯冗余图标与辅助样式组件，业务均不使用 */
+  'lime-icon',
+  'lime-shared',
+  'lime-style',
+  'uni-scss',
 ]
 
 /** 清理冗余模块时需要同步删除的孤儿文件 */
