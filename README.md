@@ -78,7 +78,7 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
 | `--theme` | `-t` | 启用明暗主题切换卡片 | `--theme` |
 | `--echarts` | - | 启用 ECharts 图表支持 | `--echarts` |
 | `--features` | - | 显式指定要启用的功能列表 | `i18n,theme,auth,echarts` / `none` / `all` |
-| `--template` | - | 模板来源（分支名或本地路径） | `uniX-rice-ui`, `main`, `base`, 本地路径 |
+| `--template` | - | 模板来源（分支名或本地路径） | `uniX-rice-ui` (Rice UI), `uniX-uview-ultra` (uview-ultra), `main` (无 UI 库), 本地路径 |
 | `--package-manager`| `-m` | 指定包管理器 | `pnpm`（默认），`npm`，`yarn` |
 | `--no-install` | - | 生成后不自动安装依赖 | - |
 | `--yes` | `-y` | 快速生成，跳过交互提问 | - |

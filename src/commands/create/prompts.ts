@@ -77,7 +77,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
   if (uiFlag === 'uview-ultra') {
     uiLibrary = 'uview-ultra'
     if (!flags.template) {
-      template = 'main'
+      template = 'uniX-uview-ultra'
     }
   }
   else if (uiFlag === 'rice-ui') {
@@ -89,7 +89,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
   else if (uiFlag === 'none' || uiFlag === '无') {
     uiLibrary = 'none'
     if (!flags.template) {
-      template = 'base'
+      template = 'main'
     }
   }
 
@@ -131,7 +131,7 @@ export async function promptCreateOptions(
     if (uiFlag === 'uview-ultra') {
       uiLibrary = 'uview-ultra'
       if (!flags.template) {
-        template = 'main'
+        template = 'uniX-uview-ultra'
       }
     }
     else if (uiFlag === 'rice-ui') {
@@ -143,7 +143,7 @@ export async function promptCreateOptions(
     else if (uiFlag === 'none' || uiFlag === '无') {
       uiLibrary = 'none'
       if (!flags.template) {
-        template = 'base'
+        template = 'main'
       }
     }
 
@@ -207,7 +207,7 @@ export async function promptCreateOptions(
       {
         value: 'none',
         label: '无',
-        hint: '不引入第三方大型 UI 库，使用原生组件与 Tailwind CSS 纯净基线 (base 分支)',
+        hint: '不引入第三方大型 UI 库，使用原生组件与 Tailwind CSS 纯净基线 (main 分支)',
       },
     ],
     initialValue: 'rice-ui',
@@ -215,10 +215,10 @@ export async function promptCreateOptions(
   guard(uiChoice)
   uiLibrary = uiChoice as UILibrary
   if (uiLibrary === 'uview-ultra') {
-    defaultTemplate = 'main'
+    defaultTemplate = 'uniX-uview-ultra'
   }
   else if (uiLibrary === 'none') {
-    defaultTemplate = 'base'
+    defaultTemplate = 'main'
   }
 
   // 3. 目标支持平台（多选展示）
