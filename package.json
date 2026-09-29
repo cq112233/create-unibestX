@@ -1,0 +1,39 @@
+{
+  "name": "create-unibestx",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "快速创建 unibestX (uni-app X) 项目的脚手架工具",
+  "author": "chenqi",
+  "license": "MIT",
+  "homepage": "https://github.com/cq112233/unibestX",
+  "bin": {
+    "bestx": "bin/index.js",
+    "create-unibestx": "bin/index.js",
+    "unibestx": "bin/index.js"
+  },
+  "files": [
+    "bin",
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "dev": "cross-env NODE_ENV=development tsup --watch",
+    "build": "cross-env NODE_ENV=production tsup",
+    "prepare": "pnpm build",
+    "start": "cross-env NODE_ENV=development node bin/index.js",
+    "smoke": "node scripts/smoke.mjs"
+  },
+  "dependencies": {
+    "@clack/prompts": "^1.0.0",
+    "dayjs": "^1.11.18",
+    "kolorist": "^1.8.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^22.10.0",
+    "cross-env": "^7.0.3",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.0"
+  }
+}
