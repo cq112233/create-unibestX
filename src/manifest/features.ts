@@ -148,78 +148,62 @@ export const FEATURES: Feature[] = [
       },
     ],
   },
-  {
-    key: 'ai',
-    label: 'AI 对话页',
-    hint: '带 SSE 流式传输的 AI 对话页（不在底部 Tab 中，独立页面）',
-    default: true,
-    removePaths: ['src/pages/ai'],
-    replacements: [
-      {
-        file: 'src/tabbar/internal/navigate.uts',
-        from: '\'/src/pages/ai/ai\'',
-        to: '\'/src/pages/index/index\'',
-        label: 'tabbar 兜底跳转从 AI 页改为首页',
-      },
-    ],
-  },
-  {
-    key: 'skills',
-    label: 'AI Skill 框架（.claude / .agents）',
-    hint: 'unibestX-skill 知识库与 superpowers 技能框架，共约 1.7MB；AI 编程时需要，普通开发可不要',
-    default: false,
-    removePaths: ['.claude', '.agents'],
-    replaceFiles: {
-      'CLAUDE.md': 'no-skills/CLAUDE.md',
-      'AGENTS.md': 'no-skills/AGENTS.md',
-    },
-  },
-  {
-    key: 'docs',
-    label: 'VitePress 文档站',
-    hint: 'docs/ 目录与 README 长文；不勾选则替换为精简版 README 并移除 vitepress 依赖',
-    default: false,
-    removePaths: ['docs'],
-    replaceFiles: {
-      'README.md': 'minimal/README.md',
-    },
-    removeDeps: ['vitepress', 'gh-pages'],
-    removeScripts: ['docs:dev', 'docs:build', 'docs:preview'],
-  },
-  {
-    key: 'deploy',
-    label: 'H5 Docker 部署与 CI',
-    hint: 'deploy/、Dockerfile、docker-compose、GitHub / Gitee / workflow 流水线配置',
-    default: false,
-    removePaths: [
-      'deploy',
-      'Dockerfile',
-      'docker-compose.yml',
-      '.dockerignore',
-      '.github',
-      '.gitee',
-      '.workflow',
-      'scripts/build-h5.mjs',
-      'scripts/switch-env.mjs',
-    ],
-    removeScripts: [
-      'build:h5',
-      'env:test',
-      'env:prod',
-      'build:test',
-      'build:prod',
-      'docker:build:test',
-      'docker:build:prod',
-      'docker:up:test',
-      'docker:up:prod',
-      'docker:stop:test',
-      'docker:stop:prod',
-      'docker:down:test',
-      'docker:down:prod',
-      'docker:down',
-    ],
-  },
 ]
+
+/**
+ * 非核心特性资产（AI 对话页、Skills 框架、文档工程、Docker 部署）
+ * 不再作为可选特性，默认全部自动裁剪，确保项目轻量纯粹
+ */
+export const ALWAYS_PRUNE_FEATURE_ASSETS = {
+  removePaths: [
+    'src/pages/ai',
+    '.claude',
+    '.agents',
+    'docs',
+    'deploy',
+    'Dockerfile',
+    'docker-compose.yml',
+    '.dockerignore',
+    '.github',
+    '.gitee',
+    '.workflow',
+    'scripts/build-h5.mjs',
+    'scripts/switch-env.mjs',
+  ],
+  replacements: [
+    {
+      file: 'src/tabbar/internal/navigate.uts',
+      from: '\'/src/pages/ai/ai\'',
+      to: '\'/src/pages/index/index\'',
+      label: 'tabbar 兜底跳转从 AI 页改为首页',
+    },
+  ],
+  replaceFiles: {
+    'CLAUDE.md': 'no-skills/CLAUDE.md',
+    'AGENTS.md': 'no-skills/AGENTS.md',
+    'README.md': 'minimal/README.md',
+  },
+  removeDeps: ['vitepress', 'gh-pages'],
+  removeScripts: [
+    'docs:dev',
+    'docs:build',
+    'docs:preview',
+    'build:h5',
+    'env:test',
+    'env:prod',
+    'build:test',
+    'build:prod',
+    'docker:build:test',
+    'docker:build:prod',
+    'docker:up:test',
+    'docker:up:prod',
+    'docker:stop:test',
+    'docker:stop:prod',
+    'docker:down:test',
+    'docker:down:prod',
+    'docker:down',
+  ],
+}
 
 export const FEATURE_DEFAULTS: Record<string, boolean> = Object.fromEntries(
   FEATURES.map(f => [f.key, f.default]),

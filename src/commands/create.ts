@@ -171,7 +171,7 @@ function printReport(
   const lines: string[] = []
 
   lines.push(`保留功能: ${options.features.length > 0 ? options.features.join(', ') : '（无）'}`)
-  lines.push(`保留分包: ${options.subPackages.length > 0 ? `${options.subPackages.length} 个分包` : '（无，仅保留 4 个 Tab）'}`)
+  lines.push(`保留分包: ${options.subPackages.length > 0 ? `${options.subPackages.length} 个分包` : options.features.includes('auth') ? '仅保留 auth 鉴权分包' : '（无分包）'}`)
   lines.push(`清理冗余 uni_modules: ${options.cleanUnusedModules ? '是' : '否'}`)
   lines.push('')
   lines.push(`删除路径: ${result.removedPaths.length} 个`)

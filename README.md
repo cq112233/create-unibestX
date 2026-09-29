@@ -73,17 +73,12 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
 |---|---|---|---|
 | `--ui` | `-u` | 指定 UI 库与模板基线 | `rice-ui`（默认，推荐），`uview-ultra`，`none`（无） |
 | `--platform` | `-p` | 目标支持平台（逗号分隔） | `web,mp-weixin,app-android,app-ios,app-harmony` |
-| `--login` | `-l` | 启用登录鉴权与路由守卫 | `--login` / `--no-login` |
+| `--login` | `-l` | 启用登录鉴权与路由守卫（仅保留 auth 分包） | `--login` / `--no-login` |
 | `--i18n` | `-i` | 启用多语言 i18n 国际化 | `--i18n` / `--no-i18n` |
+| `--theme` | `-t` | 启用明暗主题切换卡片 | `--theme` |
 | `--echarts` | - | 启用 ECharts 图表支持 | `--echarts` |
-| `--ai` | - | 启用 AI 对话流式传输页 | `--ai` |
-| `--theme` | - | 启用明暗主题切换卡片 | `--theme` |
-| `--skills` | - | 保留 AI Skill 框架与知识库 | `--skills` |
-| `--docs` | - | 保留 VitePress 文档工程 | `--docs` |
-| `--deploy` | - | 保留 H5 Docker 部署与 CI | `--deploy` |
-| `--features` | - | 显式指定要启用的功能列表 | `i18n,theme,auth,echarts,ai` / `none` / `all` |
-| `--subs` | - | 显式指定保留的演示分包 | `device,lodash,zpaging` / `none` / `all` |
-| `--template` | - | 模板来源（分支名或本地路径） | `uniX-rice-ui`, `main`, `/path/to/unibestX` |
+| `--features` | - | 显式指定要启用的功能列表 | `i18n,theme,auth,echarts` / `none` / `all` |
+| `--template` | - | 模板来源（分支名或本地路径） | `uniX-rice-ui`, `main`, `base`, 本地路径 |
 | `--package-manager`| `-m` | 指定包管理器 | `pnpm`（默认），`npm`，`yarn` |
 | `--no-install` | - | 生成后不自动安装依赖 | - |
 | `--yes` | `-y` | 快速生成，跳过交互提问 | - |

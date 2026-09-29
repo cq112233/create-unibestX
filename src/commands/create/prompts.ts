@@ -66,7 +66,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
   const subDirs = SUB_PACKAGES.map(s => s.dir)
 
   const rawName = flags._?.[0]
-  if (!rawName || !flags.features || !flags.subs) {
+  if (!rawName || !flags.features) {
     return null
   }
 
@@ -101,7 +101,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
     targetDir: rawName,
     uiLibrary,
     features: parseList(flags.features, featureKeys),
-    subPackages: parseList(flags.subs, subDirs),
+    subPackages: flags.subs ? parseList(flags.subs, subDirs) : [],
     cleanUnusedModules: !flags.keepUnusedModules,
     template,
     packageManager: pkgManager,
@@ -116,6 +116,7 @@ export async function promptCreateOptions(
   cwd: string,
   flags: CliFlags,
 ): Promise<CreateOptions> {
+  const subDirs = SUB_PACKAGES.map(s => s.dir)
   const fromFlags = optionsFromFlags(flags)
   if (fromFlags) {
     return fromFlags
@@ -151,7 +152,7 @@ export async function promptCreateOptions(
       targetDir: rawName,
       uiLibrary,
       features: FEATURES.filter(f => f.default).map(f => f.key),
-      subPackages: SUB_PACKAGES.filter(s => s.default).map(s => s.dir),
+      subPackages: flags.subs ? parseList(flags.subs, subDirs) : [],
       cleanUnusedModules: !flags.keepUnusedModules,
       template,
       packageManager: (flags.packageManager || flags.m || 'pnpm') as PackageManager,
@@ -163,7 +164,6 @@ export async function promptCreateOptions(
     throw new Error(
       '当前不是交互式终端环境，必须显式指定要勾选的内容：\n'
       + '  --features <list>  如 i18n,theme,auth,echarts（none = 全不选，all = 全选）\n'
-      + '  --subs <list>      如 device,lodash（none = 全不选，all = 全选）\n'
       + '想要默认值，可以只加 --yes。',
     )
   }
@@ -236,7 +236,7 @@ export async function promptCreateOptions(
   })
   guard(selectedPlatforms)
 
-  // 4. 功能特性勾选
+  // 4. 功能特性勾选（仅保留核心 4 样）
   const selectedFeatures = await p.multiselect({
     message: '选择需要内置的功能特性（空格切换，回车确认）',
     options: FEATURES.map(f => ({
@@ -249,41 +249,10 @@ export async function promptCreateOptions(
   })
   guard(selectedFeatures)
 
-  // 5. 演示分包选择策略
-  const subStrategy = await p.select({
-    message: '选择演示分包配置',
-    options: [
-      { value: 'all', label: '保留全部演示分包（推荐，含 12 个常用能力示例）' },
-      { value: 'custom', label: '自定义勾选分包' },
-      { value: 'none', label: '极简模式（移除所有演示分包，仅留 4 个 Tab 核心骨架）' },
-    ],
-    initialValue: 'all',
-  })
-  guard(subStrategy)
+  // 分包默认不额外保留演示分包，仅按需包含 auth 页面
+  const selectedSubs: string[] = flags.subs ? parseList(flags.subs, subDirs) : []
 
-  let selectedSubs: string[] = []
-  if (subStrategy === 'all') {
-    selectedSubs = SUB_PACKAGES.map(s => s.dir)
-  }
-  else if (subStrategy === 'none') {
-    selectedSubs = []
-  }
-  else {
-    const customSubs = await p.multiselect({
-      message: '请选择需要保留的演示分包',
-      options: SUB_PACKAGES.map(s => ({
-        value: s.dir,
-        label: s.label,
-        hint: s.hint,
-      })),
-      initialValues: SUB_PACKAGES.filter(s => s.default).map(s => s.dir),
-      required: false,
-    })
-    guard(customSubs)
-    selectedSubs = customSubs as string[]
-  }
-
-  // 6. 高级选项确认
+  // 5. 高级选项确认
   const wantsAdvanced = await p.confirm({
     message: '是否需要配置高级选项？（模板来源分支 / 包管理器 / 自动安装）',
     initialValue: false,

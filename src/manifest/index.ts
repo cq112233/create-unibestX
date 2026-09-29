@@ -1,4 +1,4 @@
-export { FEATURES, FEATURE_DEFAULTS, getFeature } from './features'
+export { FEATURES, FEATURE_DEFAULTS, ALWAYS_PRUNE_FEATURE_ASSETS, getFeature } from './features'
 export { CARD_GROUPS, SUB_PACKAGES, getCardGroupByCard, getSubPackage } from './subpackages'
 export type { CardGroup } from './subpackages'
 export {

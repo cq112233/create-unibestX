@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
+  ALWAYS_PRUNE_FEATURE_ASSETS,
   CARD_GROUPS,
   FEATURES,
   HARNESS_TIED_TO_UNUSED_MODULES,
@@ -69,6 +70,13 @@ export async function prune(
     removedDeps.push(...feature.removeDeps ?? [])
     removedScripts.push(...feature.removeScripts ?? [])
   }
+
+  // 默认自动裁剪非核心特性（AI、Skills、Docs、Docker 部署）
+  removeList.push(...ALWAYS_PRUNE_FEATURE_ASSETS.removePaths)
+  replacements.push(...ALWAYS_PRUNE_FEATURE_ASSETS.replacements)
+  Object.assign(replaceFiles, ALWAYS_PRUNE_FEATURE_ASSETS.replaceFiles)
+  removedDeps.push(...ALWAYS_PRUNE_FEATURE_ASSETS.removeDeps)
+  removedScripts.push(...ALWAYS_PRUNE_FEATURE_ASSETS.removeScripts)
 
   // ---------- 2. 演示分包 ----------
   for (const sub of SUB_PACKAGES) {

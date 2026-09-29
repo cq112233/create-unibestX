@@ -26,15 +26,10 @@ export function printHelp(): void {
   ${green('                             支持逗号分隔或多选：-p web,mp-weixin')}
   ${green('  -l, --login                启用登录鉴权与路由守卫（--no-login 为禁用）')}
   ${green('  -i, --i18n                 启用多语言 i18n（--no-i18n 为禁用）')}
+  ${green('  -t, --theme                启用主题切换卡片')}
   ${green('  --echarts                  启用 ECharts 图表')}
-  ${green('  --ai                       启用 AI 对话流式页')}
-  ${green('  --theme                    启用主题切换卡片')}
-  ${green('  --skills                   保留 AI Skill 框架（.claude / .agents / unibestX-skill）')}
-  ${green('  --docs                     保留 VitePress 文档站')}
-  ${green('  --deploy                   保留 H5 Docker 部署与 CI/CD 配置')}
   ${green('  --features <list>          功能开关列表（none = 全不选，all = 全选）')}
-  ${green('  --subs <list>              保留的演示分包（none = 全不选，all = 全选）')}
-  ${green('  --template <source>        模板来源（分支名如 main/uniX-rice-ui，或本地目录路径）')}
+  ${green('  --template <source>        模板来源（分支名如 main/uniX-rice-ui/base，或本地目录路径）')}
   ${green('  --keep-unused-modules      保留 25 个零引用 uni_modules（默认会自动清理精简）')}
   ${green('  -m, --package-manager      指定包管理器 (pnpm, npm, yarn)')}
   ${green('  --no-install               生成后不自动安装依赖')}
@@ -42,13 +37,9 @@ export function printHelp(): void {
 
   ${blue('可选的功能特性 (Features):')}
   ${yellow('  i18n                       多语言国际化支持')}
-  ${yellow('  auth                       登录鉴权 + 路由守卫 + 401 拦截')}
   ${yellow('  theme                      明暗主题切换与 CSS 变量驱动')}
+  ${yellow('  auth                       登录鉴权 + 路由守卫 + 401 拦截')}
   ${yellow('  echarts                    ECharts 图表全端兼容支持')}
-  ${yellow('  ai                         AI 对话流式传输（SSE/Chunk）')}
-  ${yellow('  skills                     AI 编程 Skill 框架与 uni-app X 规范库')}
-  ${yellow('  docs                       VitePress 文档工程')}
-  ${yellow('  deploy                     H5 Docker 容器化打包与 CI 流水线')}
 
   ${blue('示例:')}
   ${green('  # 交互式引导创建')}
