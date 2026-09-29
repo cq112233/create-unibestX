@@ -91,6 +91,16 @@ export async function prune(
     patchRules.push(...(sub.patches ?? []))
   }
 
+  // 清理任何未在清单中的非核心演示分包（如 rice-ui 演示分包）
+  if (!keptSubs.has('rice-ui')) {
+    removeList.push('src/sub/rice-ui')
+  }
+
+  // 如果未启用 auth 且未保留任何分包，直接完整移除 src/sub
+  if (!kept.has('auth') && keptSubs.size === 0) {
+    removeList.push('src/sub')
+  }
+
   // ---------- 3. 入口卡片 ----------
   for (const group of CARD_GROUPS) {
     if (group.serves.some(dir => keptSubs.has(dir))) {

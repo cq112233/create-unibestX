@@ -6,11 +6,11 @@ import { copyDir, fs, isEmptyDir, removePath } from '../utils/fs'
 
 const execFileAsync = promisify(execFile)
 
-/** 默认 GitHub 模板仓库，可用 `UNIBESTX_REPO` 环境变量覆盖 */
-export const DEFAULT_REPO = process.env.UNIBESTX_REPO ?? 'https://github.com/cq112233/unibestX.git'
+/** 默认 Gitee 模板仓库（国内极速源，可用 `UNIBESTX_REPO` 环境变量覆盖） */
+export const DEFAULT_REPO = process.env.UNIBESTX_REPO ?? 'https://gitee.com/htwoO-cq/uni-best-x.git'
 
-/** 国内 Gitee 镜像仓库 */
-export const GITEE_REPO = 'https://gitee.com/htwoO-cq/uni-best-x.git'
+/** GitHub 备份容灾仓库 */
+export const GITHUB_REPO = 'https://github.com/cq112233/unibestX.git'
 
 /** 默认分支 */
 export const DEFAULT_BRANCH = 'main'
@@ -78,20 +78,20 @@ export async function acquireTemplate(
     )
   }
   catch (error: any) {
-    // 若 GitHub 克隆失败且未显式指定自定义仓库，自动尝试 Gitee 镜像源
+    // 若 Gitee 镜像失败且未显式指定自定义仓库，自动尝试 GitHub 容灾
     if (source.repo === DEFAULT_REPO) {
-      step(`GitHub 连接受限，正在切换 Gitee 镜像重试: ${GITEE_REPO} #${source.branch}`)
+      step(`Gitee 连接受限，正在切换 GitHub 备份源重试: ${GITHUB_REPO} #${source.branch}`)
       try {
         await removePath(targetDir)
         await execFileAsync(
           'git',
-          ['clone', '--depth=1', '--single-branch', '-b', source.branch, GITEE_REPO, targetDir],
+          ['clone', '--depth=1', '--single-branch', '-b', source.branch, GITHUB_REPO, targetDir],
           { maxBuffer: 32 * 1024 * 1024 },
         )
-        source.repo = GITEE_REPO
+        source.repo = GITHUB_REPO
       }
-      catch (giteeError: any) {
-        // 如果本地存在 /Users/chenqi/Desktop/unibestX 且在同机器开发，尝试本地容灾提示
+      catch (githubError: any) {
+        // 如果本地存在 /Users/chenqi/Desktop/unibestX 且在同机器开发，尝试本地容灾
         const localDevPath = '/Users/chenqi/Desktop/unibestX'
         if (existsSync(localDevPath)) {
           step(`网络拉取失败，检测到本地开发模板 ${localDevPath}，正在使用本地模板容灾...`)
@@ -101,8 +101,8 @@ export async function acquireTemplate(
           return { strippedGit: stripped, source: { kind: 'local', dir: localDevPath } }
         }
 
-        const detail = String(giteeError?.stderr ?? giteeError?.message ?? giteeError).trim()
-        throw new Error(`克隆模板失败（GitHub 与 Gitee 均未成功）:\n${detail}\n请检查网络连接或使用 --template <本地路径>。`)
+        const detail = String(githubError?.stderr ?? githubError?.message ?? githubError).trim()
+        throw new Error(`克隆模板失败（Gitee 与 GitHub 均未成功）:\n${detail}\n请检查网络连接或使用 --template <本地路径>。`)
       }
     }
     else {
