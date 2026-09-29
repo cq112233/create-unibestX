@@ -5,7 +5,7 @@ export type PackageManager = 'pnpm' | 'npm' | 'yarn'
 export type Platform = 'web' | 'mp-weixin' | 'app-android' | 'app-ios' | 'app-harmony'
 
 /** 支持的 UI 库选项 */
-export type UILibrary = 'rice-ui' | 'uview-ultra'
+export type UILibrary = 'rice-ui' | 'uview-ultra' | 'none'
 
 /**
  * 一条引用清理规则

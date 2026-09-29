@@ -21,7 +21,7 @@ export function printHelp(): void {
   ${green('  doctor [path]              自检指定项目目录')}
 
   ${blue('创建选项:')}
-  ${green('  -u, --ui <library>         指定 UI 库：rice-ui (推荐) 或 uview-ultra')}
+  ${green('  -u, --ui <library>         指定 UI 库：rice-ui (推荐)、uview-ultra 或 none (无)')}
   ${green('  -p, --platform <types>     支持平台：web, mp-weixin, app-android, app-ios, app-harmony')}
   ${green('                             支持逗号分隔或多选：-p web,mp-weixin')}
   ${green('  -l, --login                启用登录鉴权与路由守卫（--no-login 为禁用）')}

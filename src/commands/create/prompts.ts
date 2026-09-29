@@ -86,6 +86,12 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
       template = 'uniX-rice-ui'
     }
   }
+  else if (uiFlag === 'none' || uiFlag === '无') {
+    uiLibrary = 'none'
+    if (!flags.template) {
+      template = 'base'
+    }
+  }
 
   const pkgManager = (flags.packageManager || flags.m || 'pnpm') as PackageManager
   const install = flags.install !== false && flags.install !== 'false'
@@ -131,6 +137,12 @@ export async function promptCreateOptions(
       uiLibrary = 'rice-ui'
       if (!flags.template) {
         template = 'uniX-rice-ui'
+      }
+    }
+    else if (uiFlag === 'none' || uiFlag === '无') {
+      uiLibrary = 'none'
+      if (!flags.template) {
+        template = 'base'
       }
     }
 
@@ -192,6 +204,11 @@ export async function promptCreateOptions(
         label: 'uview-ultra',
         hint: '内置深度修复版，已兼容 Vapor/VDOM 基础功能，可满足常规需求',
       },
+      {
+        value: 'none',
+        label: '无',
+        hint: '不引入第三方大型 UI 库，使用原生组件与 Tailwind CSS 纯净基线 (base 分支)',
+      },
     ],
     initialValue: 'rice-ui',
   })
@@ -199,6 +216,9 @@ export async function promptCreateOptions(
   uiLibrary = uiChoice as UILibrary
   if (uiLibrary === 'uview-ultra') {
     defaultTemplate = 'main'
+  }
+  else if (uiLibrary === 'none') {
+    defaultTemplate = 'base'
   }
 
   // 3. 目标支持平台（多选展示）

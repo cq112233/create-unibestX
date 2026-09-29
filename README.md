@@ -71,7 +71,7 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
 
 | 参数 | 缩写 | 说明 | 可选值 / 示例 |
 |---|---|---|---|
-| `--ui` | `-u` | 指定 UI 库与模板基线 | `rice-ui`（默认，推荐），`uview-ultra` |
+| `--ui` | `-u` | 指定 UI 库与模板基线 | `rice-ui`（默认，推荐），`uview-ultra`，`none`（无） |
 | `--platform` | `-p` | 目标支持平台（逗号分隔） | `web,mp-weixin,app-android,app-ios,app-harmony` |
 | `--login` | `-l` | 启用登录鉴权与路由守卫 | `--login` / `--no-login` |
 | `--i18n` | `-i` | 启用多语言 i18n 国际化 | `--i18n` / `--no-i18n` |

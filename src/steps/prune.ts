@@ -121,8 +121,8 @@ export async function prune(
     step('写入替换版文件')
     const templatesDir = findTemplatesDir()
     for (const [target, source] of Object.entries(replaceFiles)) {
-      if (isGone(target)) {
-        warn(`跳过替换（目标已删）: ${target} ← templates/${source}`)
+      if (isGone(target) || !existsSync(path.join(projectRoot, target))) {
+        warn(`跳过替换（目标已删或不存在）: ${target} ← templates/${source}`)
         continue
       }
       const src = path.join(templatesDir, source)
@@ -140,8 +140,8 @@ export async function prune(
 
   // ---------- 7. 改引用 ----------
   step('清理悬空引用')
-  const aliveRules = patchRules.filter(rule => !isGone(rule.file))
-  const aliveReplacements = replacements.filter(rule => !isGone(rule.file))
+  const aliveRules = patchRules.filter(rule => !isGone(rule.file) && existsSync(path.join(projectRoot, rule.file)))
+  const aliveReplacements = replacements.filter(rule => !isGone(rule.file) && existsSync(path.join(projectRoot, rule.file)))
 
   const patchOutcomes = await applyPatches(projectRoot, aliveRules, warn)
   const replacementOutcomes = await applyReplacements(projectRoot, aliveReplacements, warn)
