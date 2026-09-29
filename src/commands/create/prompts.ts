@@ -221,22 +221,7 @@ export async function promptCreateOptions(
     defaultTemplate = 'main'
   }
 
-  // 3. 目标支持平台（多选展示）
-  const selectedPlatforms = await p.multiselect({
-    message: `选择需要支持的目标平台（多选） ${green('[全端统一代码，基于 HBuilderX 驱动编译]')}`,
-    options: [
-      { value: 'web', label: 'H5 / Web', hint: '支持极速热更新与轻量容器部署' },
-      { value: 'mp-weixin', label: '微信小程序', hint: '支持 weapp-tailwindcss 原子样式' },
-      { value: 'app-android', label: 'Android 原生 App', hint: '高性能 Vapor 原生渲染' },
-      { value: 'app-ios', label: 'iOS 原生 App', hint: '高性能 Vapor 原生渲染' },
-      { value: 'app-harmony', label: '鸿蒙 (Harmony) Next', hint: '原生鸿蒙支持' },
-    ],
-    initialValues: ['web', 'mp-weixin', 'app-android', 'app-ios', 'app-harmony'],
-    required: true,
-  })
-  guard(selectedPlatforms)
-
-  // 4. 功能特性勾选（仅保留核心 4 样）
+  // 3. 功能特性勾选（仅保留核心 4 样）
   const selectedFeatures = await p.multiselect({
     message: '选择需要内置的功能特性（空格切换，回车确认）',
     options: FEATURES.map(f => ({
@@ -249,70 +234,23 @@ export async function promptCreateOptions(
   })
   guard(selectedFeatures)
 
+  // 目标平台默认支持全端统一代码
+  const platforms: Platform[] = ['web', 'mp-weixin', 'app-android', 'app-ios', 'app-harmony']
+
   // 分包默认不额外保留演示分包，仅按需包含 auth 页面
   const selectedSubs: string[] = flags.subs ? parseList(flags.subs, subDirs) : []
 
-  // 5. 高级选项确认
-  const wantsAdvanced = await p.confirm({
-    message: '是否需要配置高级选项？（模板来源分支 / 包管理器 / 自动安装）',
-    initialValue: false,
-  })
-  guard(wantsAdvanced)
-
-  let template = flags.template ?? defaultTemplate
-  let cleanUnusedModules = true
-  let packageManager: PackageManager = 'pnpm'
-  let install = true
-
-  if (wantsAdvanced) {
-    const advanced = await p.group(
-      {
-        template: () =>
-          p.text({
-            message: '模板来源（分支名如 main/uniX-rice-ui，或本地仓库绝对路径）',
-            placeholder: defaultTemplate,
-            initialValue: defaultTemplate,
-          }),
-        cleanUnusedModules: () =>
-          p.confirm({
-            message: '清理 25 个零引用 uni_modules？（实测省约 6MB，可随时手动加回）',
-            initialValue: true,
-          }),
-        packageManager: () =>
-          p.select({
-            message: '请选择包管理器',
-            options: [
-              { value: 'pnpm', label: 'pnpm', hint: '推荐' },
-              { value: 'npm', label: 'npm' },
-              { value: 'yarn', label: 'yarn' },
-            ],
-            initialValue: 'pnpm',
-          }),
-        install: () =>
-          p.confirm({
-            message: '生成后自动安装依赖？',
-            initialValue: true,
-          }),
-      },
-      {
-        onCancel: () => {
-          p.cancel('操作已取消')
-          process.exit(0)
-        },
-      },
-    )
-
-    template = String(advanced.template).trim() || defaultTemplate
-    cleanUnusedModules = Boolean(advanced.cleanUnusedModules)
-    packageManager = advanced.packageManager as PackageManager
-    install = Boolean(advanced.install)
-  }
+  // 默认生产级配置（特殊需求通过命令行参数 -m / --no-install / --template 传入）
+  const template = flags.template ?? defaultTemplate
+  const cleanUnusedModules = !flags.keepUnusedModules
+  const packageManager: PackageManager = (flags.packageManager || flags.m || 'pnpm') as PackageManager
+  const install = flags.install !== false && flags.install !== 'false'
 
   return {
     projectName: deriveProjectName(projectName),
     targetDir: projectName,
     uiLibrary,
-    platforms: selectedPlatforms as Platform[],
+    platforms,
     features: selectedFeatures as string[],
     subPackages: selectedSubs,
     cleanUnusedModules,
