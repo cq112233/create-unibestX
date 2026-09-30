@@ -190,7 +190,48 @@ export async function promptCreateOptions(
     projectName = String(inputProjectName).trim()
   }
 
-  // 2. 选择 UI 库
+  // 2. 选择项目模板模式
+  const templateMode = await p.select({
+    message: '请选择项目模板',
+    options: [
+      {
+        value: 'full',
+        label: `${green('完整模板')}（推荐）`,
+        hint: '内置 UI 库 + 可选功能特性，开箱即用的企业级脚手架',
+      },
+      {
+        value: 'minimal',
+        label: '极简模板',
+        hint: '最小化干净基线，仅保留核心框架，适合从零搭建',
+      },
+    ],
+    initialValue: 'full',
+  })
+  guard(templateMode)
+
+  // ── 极简模板：直接用 base 分支，跳过 UI 库与功能选择 ──
+  if (templateMode === 'minimal') {
+    const template = flags.template ?? 'base'
+    const packageManager: PackageManager = (flags.packageManager || flags.m || 'pnpm') as PackageManager
+    const install = flags.install !== false && flags.install !== 'false'
+
+    return {
+      projectName: deriveProjectName(projectName),
+      targetDir: projectName,
+      uiLibrary: 'none',
+      platforms: ['web', 'mp-weixin', 'app-android', 'app-ios', 'app-harmony'],
+      features: [],
+      subPackages: [],
+      cleanUnusedModules: !flags.keepUnusedModules,
+      template,
+      packageManager,
+      install,
+    }
+  }
+
+  // ── 完整模板：继续选择 UI 库与功能特性 ──
+
+  // 3. 选择 UI 库
   let uiLibrary: UILibrary = 'rice-ui'
   let defaultTemplate = 'uniX-rice-ui'
 
@@ -224,7 +265,7 @@ export async function promptCreateOptions(
     defaultTemplate = 'main'
   }
 
-  // 3. 功能特性勾选（i18n、主题、ECharts；登录鉴权与路由守卫为核心底座永久内置）
+  // 4. 功能特性勾选（i18n、主题、ECharts；登录鉴权与路由守卫为核心底座永久内置）
   const selectedFeatures = await p.multiselect({
     message: '选择需要内置的功能特性（空格切换，回车确认）',
     options: FEATURES.map(f => ({

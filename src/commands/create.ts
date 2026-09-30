@@ -8,6 +8,7 @@ import { bold, green, yellow } from 'kolorist'
 import { acquireTemplate } from '../steps/acquire'
 import { finalize } from '../steps/finalize'
 import { prune } from '../steps/prune'
+import type { PruneResult } from '../steps/prune'
 import { sanitize } from '../steps/sanitize'
 import { removePath } from '../utils/fs'
 import { logger } from '../utils/logger'
@@ -67,28 +68,46 @@ export async function createCommand(
       }
     })
 
+    const isMinimalTemplate = options.template === 'base'
+
     await stage('初始化项目', async () => {
       await sanitize(projectDir, options.projectName, () => {})
 
-      const pruneResult = await prune(
-        projectDir,
-        options.projectName,
-        {
-          features: options.features,
-          subPackages: options.subPackages,
-          cleanUnusedModules: options.cleanUnusedModules,
-        },
-        () => {},
-        () => {},
-      )
+      let pruneResult: PruneResult
 
-      const issues = await runSelfCheck(projectDir)
-      const errors = issues.filter(i => i.level === 'error')
-      if (errors.length > 0) {
-        for (const issue of errors) {
-          logger.error(`[${issue.code}] ${issue.message}${issue.file ? `（${issue.file}）` : ''}`)
+      if (isMinimalTemplate) {
+        // 极简模板（base 分支）已是干净基线，无需裁剪
+        pruneResult = {
+          removedPaths: [],
+          appliedRules: 0,
+          skippedRules: [],
+          replacedFiles: [],
+          removedDeps: [],
+          removedScripts: [],
+          routeCleanup: { pages: [], subPackages: [], easycom: [] },
         }
-        throw new SelfCheckFailed(errors.length)
+      }
+      else {
+        pruneResult = await prune(
+          projectDir,
+          options.projectName,
+          {
+            features: options.features,
+            subPackages: options.subPackages,
+            cleanUnusedModules: options.cleanUnusedModules,
+          },
+          () => {},
+          () => {},
+        )
+
+        const issues = await runSelfCheck(projectDir)
+        const errors = issues.filter(i => i.level === 'error')
+        if (errors.length > 0) {
+          for (const issue of errors) {
+            logger.error(`[${issue.code}] ${issue.message}${issue.file ? `（${issue.file}）` : ''}`)
+          }
+          throw new SelfCheckFailed(errors.length)
+        }
       }
 
       await finalize(projectDir, options, pruneResult, cliVersion, () => {}, () => {})
