@@ -223,8 +223,9 @@ export const SUB_PACKAGES: SubPackage[] = [
   {
     dir: 'zpaging',
     label: 'z-paging-x 原生分页',
-    hint: '高性能原生分页（依赖 z-paging-x）',
-    modules: ['z-paging-x'],
+    // 插件本体 uni_modules/z-paging-x 恒定保留（见 ALWAYS_KEEP_MODULES），
+    // 这里裁掉的只是 src/sub/zpaging 演示页
+    hint: '原生分页演示页（插件本体 z-paging-x 始终保留，不受裁剪影响）',
     default: true,
     patches: [
       {

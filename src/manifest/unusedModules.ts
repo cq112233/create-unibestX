@@ -7,8 +7,9 @@
  *
  * 刻意不在列的模块（虽然自身没有直接调用，但保留方依赖它们）：
  * lime-shared / lime-style（lime-icon 依赖）、uni-scss（uni-icons 依赖）。
- * 另：e-chart / z-paging-x / iRainna-lodash / lime-dayuts / mp-html / unix-crypto
- * 由对应的功能或分包开关负责，不在此处重复声明。
+ * 另：e-chart / iRainna-lodash / lime-dayuts / mp-html / unix-crypto
+ * 由对应的功能或分包开关负责，不在此处重复声明；
+ * z-paging-x 恒定保留，见下方 ALWAYS_KEEP_MODULES。
  */
 export const UNUSED_MODULES: string[] = [
   // --- uni-ui-x 及其 12 个传递依赖 ---
@@ -58,6 +59,18 @@ export const UNUSED_MODULES: string[] = [
   'lime-shared',
   'lime-style',
   'uni-scss',
+]
+
+/**
+ * 无论怎么裁剪都要保留的 uni_modules
+ *
+ * z-paging-x 是列表页的原生底座（下拉刷新 / 上拉加载 / 聊天记录模式），
+ * 业务页面几乎必然要用到它。演示分包 src/sub/zpaging 属于可裁剪的示例层，
+ * 插件本体不能跟着走 —— 否则用户还要回插件市场重装一遍，页面里的
+ * `<z-paging-x>` 也会直接变成悬空标签。
+ */
+export const ALWAYS_KEEP_MODULES: string[] = [
+  'z-paging-x',
 ]
 
 /** 清理冗余模块时需要同步删除的孤儿文件 */

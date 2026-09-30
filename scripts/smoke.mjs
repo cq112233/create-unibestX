@@ -59,7 +59,7 @@ const CASES = [
   },
   {
     name: 'minimal',
-    description: '最小集：无可选功能与分包，保留 auth 底座',
+    description: '最小集：无可选功能与分包，保留 auth 底座与常驻的 z-paging-x',
     args: ['--features', 'none', '--subs', 'none'],
     expectPresent: [
       'src/pages/index/index.uvue',
@@ -67,6 +67,7 @@ const CASES = [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
       'src/store/vapor/app.ts',
+      'uni_modules/z-paging-x',
     ],
     expectAbsent: [
       'src/pages/ai',
@@ -100,13 +101,13 @@ const CASES = [
     expectPresent: [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
+      'uni_modules/z-paging-x',
     ],
     expectAbsent: [
       'src/sub/crypto',
       'src/sub/time',
       'src/sub/zpaging',
       'src/sub/rxjsDemo',
-      'uni_modules/z-paging-x',
       'uni_modules/mp-html',
       'src/pages/ai',
       'src/pages/basic/components',
@@ -120,6 +121,7 @@ const CASES = [
     expectPresent: [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
+      'uni_modules/z-paging-x',
     ],
     expectAbsent: [
       'src/sub/device',
@@ -136,14 +138,14 @@ const CASES = [
   },
   {
     name: 'nested-only',
-    description: '只留 nested-scroll：组件保留，基础/功能视图纯净',
+    description: '只留 nested-scroll：组件保留，基础/功能视图纯净，z-paging-x 插件常驻',
     args: ['--features', 'none', '--subs', 'nested-scroll'],
     expectPresent: [
       'src/sub/auth/login.uvue',
+      'uni_modules/z-paging-x',
     ],
     expectAbsent: [
       'src/sub/zpaging',
-      'uni_modules/z-paging-x',
       'src/pages/function/components',
     ],
   },

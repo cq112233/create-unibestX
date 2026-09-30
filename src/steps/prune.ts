@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import {
+  ALWAYS_KEEP_MODULES,
   ALWAYS_PRUNE_FEATURE_ASSETS,
   CARD_GROUPS,
   FEATURES,
@@ -126,6 +127,10 @@ export async function prune(
   if (protectedDeps.size > 0) {
     uniqueRemovals = uniqueRemovals.filter(p => !protectedDeps.has(p))
   }
+
+  // 常驻模块（如 z-paging-x）不参与裁剪：演示分包可以走，插件本体必须留下
+  const alwaysKeep = new Set(ALWAYS_KEEP_MODULES.map(mod => `uni_modules/${mod}`))
+  uniqueRemovals = uniqueRemovals.filter(p => !alwaysKeep.has(p))
 
   step(`删除 ${uniqueRemovals.length} 个路径`)
   const removedPaths = await removePaths(uniqueRemovals.map(rel => path.join(projectRoot, rel)))
