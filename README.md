@@ -151,7 +151,7 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
 }
 ```
 
-同时收尾阶段会自动：重写 `package.json` 的名称与裁剪后的依赖/脚本、把 `.env` 里的 `VITE_APP_TITLE` 对齐为项目名、清理 `VITE_DEV_SANDBOX_PAGES` 中已删除的页面，并在项目目录执行 `git init` + `git add .`。
+同时收尾阶段会自动：重写 `package.json` 的名称与裁剪后的依赖/脚本、把 `.env` 里的 `VITE_APP_TITLE` 对齐为项目名、清理 `VITE_DEV_SANDBOX_PAGES` 中已删除的页面。脚手架**不会**在生成的项目里执行 `git init`，需要版本管理时请自行初始化。
 
 ---
 

@@ -1,12 +1,8 @@
-import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import path from 'node:path'
-import { promisify } from 'node:util'
 import type { PruneResult } from './prune'
 import type { CreateOptions } from '../types'
 import { fs, readJson, writeJson } from '../utils/fs'
-
-const execFileAsync = promisify(execFile)
 
 /** 写在生成物 `package.json` 里的元信息字段 */
 export type UnibestxMeta = {
@@ -28,11 +24,6 @@ function isLocalTemplate(template: string): boolean {
   return path.isAbsolute(template) || template.startsWith('./') || template.startsWith('../')
 }
 
-export type FinalizeResult = {
-  gitInitialized: boolean
-  gitError?: string
-}
-
 /**
  * 收尾
  */
@@ -43,17 +34,12 @@ export async function finalize(
   cliVersion: string,
   step: (msg: string) => void,
   warn: (msg: string) => void,
-): Promise<FinalizeResult> {
+): Promise<void> {
   step('重写 package.json')
   await rewritePackageJson(projectRoot, options, pruneResult, cliVersion)
 
   step('对齐 .env')
   await rewriteEnv(projectRoot, options, warn)
-
-  step('初始化 git 仓库')
-  const git = await initGit(projectRoot)
-
-  return git
 }
 
 async function rewritePackageJson(
@@ -140,18 +126,4 @@ function setEnvVar(content: string, key: string, value: string): string {
 
   const trimmed = content.replace(/\s*$/, '')
   return `${trimmed}${eol}${key}=${value}${eol}`
-}
-
-async function initGit(projectRoot: string): Promise<FinalizeResult> {
-  try {
-    await execFileAsync('git', ['init', '-q'], { cwd: projectRoot })
-    await execFileAsync('git', ['add', '.'], { cwd: projectRoot })
-    return { gitInitialized: true }
-  }
-  catch (error: any) {
-    return {
-      gitInitialized: false,
-      gitError: String(error?.stderr ?? error?.message ?? error).trim(),
-    }
-  }
 }
