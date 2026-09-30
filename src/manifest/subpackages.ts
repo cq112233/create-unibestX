@@ -112,7 +112,7 @@ export const SUB_PACKAGES: SubPackage[] = [
     dir: 'crypto',
     label: 'Crypto 加密解密',
     hint: 'Base64 / MD5 / SHA-256 / HMAC / AES / DES',
-    modules: [],
+    modules: ['unix-crypto'],
     default: true,
     patches: [
       cardBlock('Crypto 加解密工具入口', 'unix-crypto'),

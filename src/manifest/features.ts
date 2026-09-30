@@ -38,6 +38,10 @@ export const FEATURES: Feature[] = [
     ],
     replaceFiles: {
       'src/utils/i18n/index.uts': 'no-i18n/i18n-utils.uts',
+      // 轻量版的导出面与完整版不同（没有 I18nUtils / testI18n / 默认导出），
+      // 声明文件必须一起换，否则 IDE 会按完整版的类型放行不存在的导出，
+      // 且 pnpm check:uts-dts 会判定声明与源码不同步
+      'src/utils/i18n/index.d.uts.ts': 'no-i18n/i18n-utils.d.uts.ts',
       'src/store/vapor/app.ts': 'no-i18n/vapor-app.ts',
       'src/store/vdom/app.uts': 'no-i18n/vdom-app.uts',
     },
