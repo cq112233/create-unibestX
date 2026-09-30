@@ -91,9 +91,12 @@ export async function prune(
     patchRules.push(...(sub.patches ?? []))
   }
 
-  // 清理任何未在清单中的非核心演示分包（如 rice-ui 演示分包）
+  // 清理任何未在清单中的非核心演示分包（如 rice-ui / uview-ultra 演示分包）
   if (!keptSubs.has('rice-ui')) {
     removeList.push('src/sub/rice-ui')
+  }
+  if (!keptSubs.has('uview-ultra')) {
+    removeList.push('src/sub/uview-ultra')
   }
   // 注意：auth 为必有基础分包（src/sub/auth），永久保留，不作移除
 
@@ -116,9 +119,13 @@ export async function prune(
   }
 
   // ---------- 5. 删文件 ----------
-  const uniqueRemovals = [...new Set(removeList)]
+  let uniqueRemovals = [...new Set(removeList)]
 
-  assertModuleClosure(projectRoot, makeRemovalCheck(uniqueRemovals))
+  // 自动保护被保留模块依赖的模块（如 uview-ultra → lime-dayuts）
+  const protectedDeps = resolveModuleClosure(projectRoot, makeRemovalCheck(uniqueRemovals))
+  if (protectedDeps.size > 0) {
+    uniqueRemovals = uniqueRemovals.filter(p => !protectedDeps.has(p))
+  }
 
   step(`删除 ${uniqueRemovals.length} 个路径`)
   const removedPaths = await removePaths(uniqueRemovals.map(rel => path.join(projectRoot, rel)))
@@ -286,17 +293,23 @@ function subPagePath(root: string, pagePath: string): string {
   return `${root}/${pagePath}`
 }
 
-function assertModuleClosure(projectRoot: string, isGone: (p: string) => boolean): void {
+/**
+ * 检测保留模块依赖了被删模块的情况，返回需要保护（不删除）的模块路径集合。
+ * 例如 uview-ultra 依赖 lime-dayuts，即使 lime-dayuts 被分包逻辑标记删除，
+ * 也必须保留以避免编译失败。
+ */
+function resolveModuleClosure(projectRoot: string, isGone: (p: string) => boolean): Set<string> {
   const modulesDir = path.join(projectRoot, 'uni_modules')
+  const protectedPaths = new Set<string>()
   if (!existsSync(modulesDir)) {
-    return
+    return protectedPaths
   }
 
-  const broken: string[] = []
   for (const name of readdirSync(modulesDir)) {
     if (name.startsWith('.')) {
       continue
     }
+    // 跳过自身已被标记删除的模块
     if (isGone(`uni_modules/${name}`)) {
       continue
     }
@@ -332,16 +345,13 @@ function assertModuleClosure(projectRoot: string, isGone: (p: string) => boolean
         continue
       }
       if (isGone(`uni_modules/${dep}`)) {
-        broken.push(`${name} 依赖 ${dep}`)
+        // 该依赖被标记删除但仍被保留模块引用，自动保护
+        protectedPaths.add(`uni_modules/${dep}`)
       }
     }
   }
 
-  if (broken.length > 0) {
-    throw new Error(
-      `裁剪清单自相矛盾：以下保留的模块依赖了被删的模块，会直接编译失败：\n  · ${broken.join('\n  · ')}`,
-    )
-  }
+  return protectedPaths
 }
 
 export async function syncRouteConfigs(

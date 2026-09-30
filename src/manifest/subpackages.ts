@@ -111,8 +111,8 @@ export const SUB_PACKAGES: SubPackage[] = [
   {
     dir: 'crypto',
     label: 'Crypto 加密解密',
-    hint: 'Base64 / MD5 / SHA-256 / HMAC / AES / DES（依赖 unix-crypto）',
-    modules: ['unix-crypto'],
+    hint: 'Base64 / MD5 / SHA-256 / HMAC / AES / DES',
+    modules: [],
     default: true,
     patches: [
       cardBlock('Crypto 加解密工具入口', 'unix-crypto'),
@@ -206,8 +206,8 @@ export const SUB_PACKAGES: SubPackage[] = [
   {
     dir: 'time',
     label: '时间日期操作',
-    hint: '格式化、增减计算、差异比较、时间戳（依赖 lime-dayuts）',
-    modules: ['lime-dayuts'],
+    hint: '格式化、增减计算、差异比较、时间戳',
+    modules: [],
     default: true,
     patches: [
       cardBlock('Time 时间日期操作入口', 'lime-dayuts'),

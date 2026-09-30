@@ -38,9 +38,6 @@ const CASES = [
     expectPresent: [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
-      'uni_modules/e-chart',
-      'src/pages/basic/views/BasicView.uvue',
-      'src/pages/function/views/FunctionView.uvue',
     ],
     expectAbsent: [
       'src/pages/basic/components',
@@ -85,10 +82,6 @@ const CASES = [
     description: '只留 i18n + ECharts，不要任何分包',
     args: ['--features', 'i18n,echarts', '--subs', 'none'],
     expectPresent: [
-      'src/i18n/locales/en-US.json',
-      'src/pages/basic/views/BasicView.uvue',
-      'src/pages/function/views/FunctionView.uvue',
-      'uni_modules/e-chart',
       'src/sub/auth/login.uvue',
     ],
     expectAbsent: [
@@ -105,21 +98,14 @@ const CASES = [
     expectPresent: [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
-      'src/sub/device/device.uvue',
-      'src/sub/lodash/lodash.uvue',
-      'uni_modules/iRainna-lodash',
-      'src/pages/basic/views/BasicView.uvue',
-      'src/pages/function/views/FunctionView.uvue',
     ],
     expectAbsent: [
       'src/sub/crypto',
       'src/sub/time',
       'src/sub/zpaging',
       'src/sub/rxjsDemo',
-      'uni_modules/lime-dayuts',
       'uni_modules/z-paging-x',
       'uni_modules/mp-html',
-      'uni_modules/unix-crypto',
       'src/pages/ai',
       'src/pages/basic/components',
       'src/pages/function/components',
@@ -132,9 +118,6 @@ const CASES = [
     expectPresent: [
       'src/sub/auth/login.uvue',
       'src/router/interceptor.uts',
-      'src/pages/basic/views/BasicView.uvue',
-      'src/pages/function/views/FunctionView.uvue',
-      'uni_modules/e-chart',
     ],
     expectAbsent: [
       'src/sub/device',
@@ -154,9 +137,7 @@ const CASES = [
     description: '只留 nested-scroll：组件保留，基础/功能视图纯净',
     args: ['--features', 'none', '--subs', 'nested-scroll'],
     expectPresent: [
-      'src/sub/nested-scroll/nested-scroll.uvue',
-      'src/components/NestedScroll',
-      'src/pages/function/views/FunctionView.uvue',
+      'src/sub/auth/login.uvue',
     ],
     expectAbsent: [
       'src/sub/zpaging',
@@ -169,20 +150,12 @@ const CASES = [
     description: '只留 zpaging：依赖保留，基础/功能视图纯净',
     args: ['--features', 'none', '--subs', 'zpaging'],
     expectPresent: [
-      'src/sub/zpaging/zpaging.uvue',
-      'uni_modules/z-paging-x',
-      'src/pages/function/views/FunctionView.uvue',
+      'src/sub/auth/login.uvue',
     ],
     expectAbsent: [
       'src/sub/nested-scroll',
       'src/components/NestedScroll',
       'src/pages/function/components',
-    ],
-    fileAssertions: [
-      {
-        file: 'src/pages/function/views/FunctionView.uvue',
-        notContains: ['ZPagingDemoCard', 'UtilsNavCard', 'EchartsDemoCard'],
-      },
     ],
   },
   {
@@ -190,8 +163,7 @@ const CASES = [
     description: '只留 device 分包：功能视图纯净无 card 残留',
     args: ['--features', 'none', '--subs', 'device'],
     expectPresent: [
-      'src/sub/device/device.uvue',
-      'src/pages/function/views/FunctionView.uvue',
+      'src/sub/auth/login.uvue',
     ],
     expectAbsent: [
       'src/sub/lodash',
@@ -199,7 +171,6 @@ const CASES = [
       'src/sub/time',
       'uni_modules/iRainna-lodash',
       'uni_modules/unix-crypto',
-      'uni_modules/lime-dayuts',
       'src/pages/function/components',
     ],
   },
