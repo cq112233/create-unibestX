@@ -48,6 +48,8 @@ const CASES = [
       'Dockerfile',
       'uni_modules/uni-ui-x',
       'uni_modules/ali-iconfont',
+      'uni_modules/uts-worker',
+      'uni_modules/uts-button',
       'scripts/router-guard-test',
       'dist',
       'unpackage',

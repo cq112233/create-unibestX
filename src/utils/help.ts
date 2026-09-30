@@ -1,4 +1,5 @@
 import { blue, cyan, green, yellow } from 'kolorist'
+import { UNUSED_MODULES } from '../manifest'
 
 export function printHelp(): void {
   console.log(`
@@ -30,7 +31,7 @@ export function printHelp(): void {
   ${green('  --echarts                  启用 ECharts 图表')}
   ${green('  --features <list>          功能开关列表（none = 全不选，all = 全选）')}
   ${green('  --template <source>        模板来源（分支名如 uniX-rice-ui / uniX-uview-ultra / main，或本地目录路径）')}
-  ${green('  --keep-unused-modules      保留 25 个零引用 uni_modules（默认会自动清理精简）')}
+  ${green(`  --keep-unused-modules      保留 ${UNUSED_MODULES.length} 个零引用 uni_modules（默认会自动清理精简）`)}
   ${green('  -m, --package-manager      指定包管理器 (pnpm, npm, yarn)')}
   ${green('  --no-install               生成后不自动安装依赖')}
   ${green('  -y, --yes                  快速生成（使用默认配置跳过交互提问）')}

@@ -37,8 +37,19 @@ export const UNUSED_MODULES: string[] = [
   'uni-id-common',
   'uni-config-center',
   'uni-upgrade-center-app',
+  /**
+   * DCloud 官方 UTS 示例插件。uts-openSchema / uts-progressNotification 各模板分支都有，
+   * 其余 6 个只出现在 uniX-uview-ultra 分支 —— 该分支里同样没有任何页面标签、
+   * easycom 规则或源码 import 引用到它们，属于 UTS 演示残留。
+   */
   'uts-openSchema',
   'uts-progressNotification',
+  'uts-button',
+  'uts-dialogpage',
+  'uts-eventbus',
+  'uts-get-native-view',
+  'uts-worker',
+  'uts-worker-sendable-transfer',
   'lime-qrcode',
   /** 组件仅在孤儿文件 SignatureCard.uvue 里被引用 */
   'lime-signature',
