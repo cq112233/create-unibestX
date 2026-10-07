@@ -133,7 +133,11 @@ export const SUB_PACKAGES: SubPackage[] = [
     dir: 'httpDemo',
     label: 'HTTP 请求 Demo',
     hint: '基于 src/http/request.uts 的完整请求示例',
-    extraRemovePaths: ['src/api'],
+    // src/api 整个目录不参与裁剪：它是项目的接口层，不是演示资产。
+    // auth / privacy 分别被 src/http/refresh.uts、src/sub/auth/login.uvue
+    // 和 src/sub/privacy/privacy.uvue 依赖；example 虽是 httpDemo 的示例接口，
+    // 但 tests/unit/api/api.test.ts 也 import 它，一并保留以免留下断链的测试。
+    // 因此这里不声明任何 extraRemovePaths —— 未勾选时只删 src/sub/httpDemo 页面本身。
     default: true,
   },
   {

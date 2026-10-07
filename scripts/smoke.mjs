@@ -180,6 +180,31 @@ const CASES = [
   },
 ];
 
+/**
+ * `src/api` 的保留断言（回归防护）
+ *
+ * src/api 是项目的接口层，**整个目录都不参与裁剪**，与勾不勾 httpDemo 无关：
+ *   - auth/    —— 被 src/http/refresh.uts 与 src/sub/auth/login.uvue 依赖（均永久保留）
+ *   - privacy/ —— 被 src/sub/privacy/privacy.uvue 依赖（该分包不在裁剪清单里，永不删除）
+ *   - example* —— 虽是 httpDemo 的示例接口，但 tests/unit/api/api.test.ts 也 import 它
+ * 以及 tests/unit/api/api.test.ts。
+ *
+ * 曾经 httpDemo 的 extraRemovePaths 写成整目录 'src/api'，于是不勾 httpDemo 时
+ * 把 auth/privacy 一起删掉，生成物直接爆一堆悬空 import。这里对**每一个用例**
+ * 无条件断言 src/api 完整存在，杜绝同类回归再次静默滑过。
+ */
+const API_ASSETS_ALWAYS_KEPT = [
+  'src/api/auth/auth.uts',
+  'src/api/privacy/privacy.uts',
+  'src/api/example.uts',
+  'src/api/example.d.uts.ts',
+  'tests/unit/api/api.test.ts',
+];
+
+for (const testCase of CASES) {
+  testCase.expectPresent.push(...API_ASSETS_ALWAYS_KEPT);
+}
+
 const FORBIDDEN_IN_MANIFEST = [
   'v1hNSO9cKet13BIZ',
   'KCHJ9hiSZqvmd8Yx',
