@@ -16,7 +16,7 @@ pnpm start -h
 # 4. 运行创建命令测试
 pnpm start test-app --yes
 pnpm start test-app-rice -u rice-ui --yes
-pnpm start test-app-min --features none --subs none --yes
+pnpm start test-app-min --features none --yes
 ```
 
 ## 用本地模板仓库调试（`--local-repo`）
