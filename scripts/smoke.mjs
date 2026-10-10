@@ -27,6 +27,13 @@ const execFileAsync = promisify(execFile);
 const CLI_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const REPO_ROOT = process.env.UNIBESTX_LOCAL_REPO
   || (fs.existsSync('/Users/chenqi/Desktop/unibestX') ? '/Users/chenqi/Desktop/unibestX' : path.resolve(CLI_DIR, '..', 'unibestX'));
+/**
+ * 从本地仓库取哪条分支
+ *
+ * 走 `--local-repo` + 分支名，而不是 `--template <仓库路径>`：后者拷的是工作区当前
+ * checkout 的那一支，本地停在别的分支时（比如 base）会拿错模板、误报缺失。
+ */
+const BRANCH = process.env.UNIBESTX_SMOKE_BRANCH || 'uniX-rice-ui';
 const CLI = path.join(CLI_DIR, 'bin', 'index.js');
 
 /** 每组用例：命令行参数 + 生成后的断言 */
@@ -224,12 +231,25 @@ function record(caseName, ok, message) {
   console.log(`  ${mark} ${message}`);
 }
 
+/**
+ * 构造子进程环境
+ *
+ * 一律清掉 UNIBESTX_LOCAL_REPO，让用例可复现 —— 否则开发者 shell 里恰好导出了
+ * 这个变量时，本该走远程的用例会静默改走本地。
+ */
+function baseEnv(extra = {}) {
+  const env = { ...process.env };
+  delete env.UNIBESTX_LOCAL_REPO;
+  return { ...env, ...extra };
+}
+
 async function run(args, options = {}) {
   try {
     const { stdout, stderr } = await execFileAsync('node', [CLI, ...args], {
       cwd: options.cwd,
       maxBuffer: 64 * 1024 * 1024,
       stdio: options.stdin ? ['ignore', 'pipe', 'pipe'] : undefined,
+      env: baseEnv(options.env),
     });
     return { code: 0, stdout, stderr };
   }
@@ -329,6 +349,7 @@ async function runContractChecks(tempRoot) {
   const nested = path.join(tempRoot, 'deep', 'nested', 'my-app');
   const abs = await run([
     'create', nested,
+    '--no-local',
     '--template', REPO_ROOT,
     '--features', 'none', '--subs', 'none',
     '--no-install', '--yes',
@@ -347,6 +368,7 @@ async function runContractChecks(tempRoot) {
   // 2) 非法项目名
   const bad = await run([
     'create', 'bad#name',
+    '--no-local',
     '--template', REPO_ROOT,
     '--features', 'none', '--subs', 'none', '--no-install', '--yes',
   ], { cwd: tempRoot });
@@ -358,10 +380,144 @@ async function runContractChecks(tempRoot) {
 
   // 4) --yes 单独使用
   const yesOnly = await run(
-    ['create', 'yes-only', '--template', REPO_ROOT, '--no-install', '--yes'],
+    ['create', 'yes-only', '--no-local', '--template', REPO_ROOT, '--no-install', '--yes'],
     { cwd: tempRoot, stdin: 'ignore' },
   );
   record(caseName, yesOnly.code === 0, `--yes 单独使用可成功（退出码 ${yesOnly.code}）`);
+
+  // 5) --keep-unused-modules 必须真正被读取
+  //    历史 bug：CliFlags 里键名写成驼峰 keepUnusedModules，而 minimist 产出的是
+  //    'keep-unused-modules'，属性名对不上，该参数一直读到 undefined、静默失效。
+  //
+  //    这里刻意不传 --template：默认走远程分支，把断言隔离在「参数是否被读取」上，
+  //    不被「本地模板目录与裁剪清单是否对齐」这类无关问题拖累。
+  const keep = await run([
+    'create', 'keep-unused',
+    '--no-local',
+    '--features', 'none', '--subs', 'none',
+    '--keep-unused-modules', '--no-install', '--yes',
+  ], { cwd: tempRoot });
+  if (keep.code === 0) {
+    const pkg = JSON.parse(fs.readFileSync(path.join(tempRoot, 'keep-unused', 'package.json'), 'utf8'));
+    record(caseName, pkg.unibestx?.cleanUnusedModules === false,
+      `--keep-unused-modules 被读取（cleanUnusedModules 得到 ${JSON.stringify(pkg.unibestx?.cleanUnusedModules)}）`);
+  }
+  else {
+    record(caseName, false, `--keep-unused-modules 用例生成失败（退出码 ${keep.code}）`);
+  }
+
+  return caseName;
+}
+
+/**
+ * 本地模板仓库（--local-repo / --no-local / UNIBESTX_LOCAL_REPO）的配置契约
+ *
+ * 错误路径一律断言「退出码非 0」—— 静默回落远程是这套配置最需要防住的行为。
+ */
+async function runLocalRepoChecks(tempRoot) {
+  const caseName = 'local-repo';
+  console.log(`\n\x1B[1m▶ ${caseName}\x1B[0m — 本地模板仓库配置契约`);
+
+  const baseArgs = ['--features', 'none', '--subs', 'none', '--no-install', '--yes'];
+
+  // 1) 路径不存在
+  const missing = await run([
+    'create', 'lr-missing',
+    '--local-repo', path.join(tempRoot, 'no-such-repo'),
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  record(caseName, missing.code !== 0, `路径不存在时退出码非 0（得到 ${missing.code}）`);
+  record(caseName, /不存在/.test(missing.stdout + missing.stderr), '错误信息指出路径不存在');
+  record(caseName, !fs.existsSync(path.join(tempRoot, 'lr-missing')), '路径不存在时不留下生成物');
+
+  // 2) 不是 git 仓库
+  const notGitDir = path.join(tempRoot, 'not-a-repo');
+  fs.mkdirSync(notGitDir, { recursive: true });
+  const nonRepo = await run([
+    'create', 'lr-notgit',
+    '--local-repo', notGitDir,
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  record(caseName, nonRepo.code !== 0, `非 git 目录时退出码非 0（得到 ${nonRepo.code}）`);
+  record(caseName, /不是 git 仓库/.test(nonRepo.stdout + nonRepo.stderr), '错误信息指出不是 git 仓库');
+
+  // 3) 裸 --local-repo 且环境变量未设
+  const bare = await run([
+    'create', 'lr-bare',
+    '--local-repo',
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  record(caseName, bare.code !== 0, `裸 --local-repo 且无环境变量时退出码非 0（得到 ${bare.code}）`);
+  record(caseName, /未提供路径/.test(bare.stdout + bare.stderr), '错误信息提示缺少路径');
+
+  // 4) 请求的分支在本地仓库中不存在 → 报错并列出可用分支
+  const badBranch = await run([
+    'create', 'lr-badbranch',
+    '--local-repo', REPO_ROOT,
+    '--template', 'no-such-branch-xyz',
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  record(caseName, badBranch.code !== 0, `分支不存在时退出码非 0（得到 ${badBranch.code}）`);
+  const badOut = badBranch.stdout + badBranch.stderr;
+  record(caseName, /可用分支/.test(badOut), '错误信息列出可用分支');
+  record(caseName, badOut.includes(BRANCH), `可用分支列表含 ${BRANCH}`);
+
+  // 5) 正常取本地分支 → 来源日志精确指出分支与取自工作区/已提交内容
+  const ok = await run([
+    'create', 'lr-ok',
+    '--local-repo', REPO_ROOT,
+    '--template', BRANCH,
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  const okOut = ok.stdout + ok.stderr;
+  record(caseName, okOut.includes('本地模板模式已开启'), '本地模板模式开启时有提示');
+  record(caseName, okOut.includes(`#${BRANCH}`) && /（工作区|（本地克隆/.test(okOut),
+    `来源日志标出分支 #${BRANCH} 与取自工作区/已提交内容`);
+  record(caseName, !okOut.includes('模板来源: 本地目录'),
+    '来源日志按「本地仓库」措辞，而非字面目录');
+  if (ok.code === 0) {
+    const pkg = JSON.parse(fs.readFileSync(path.join(tempRoot, 'lr-ok', 'package.json'), 'utf8'));
+    record(caseName, pkg.unibestx?.template === `local:${BRANCH}`,
+      `生成物记为 local:${BRANCH}（得到 ${JSON.stringify(pkg.unibestx?.template)}）`);
+  }
+  else {
+    // 模板内容自身没过自检（裁剪清单与模板目录不符）不属本契约范围，仅记录
+    console.log(`  \x1B[33m·\x1B[0m 本地分支生成未通过自检（退出码 ${ok.code}），跳过生成物标签断言`);
+  }
+
+  // 6) 环境变量驱动
+  const viaEnv = await run([
+    'create', 'lr-env',
+    '--template', BRANCH,
+    ...baseArgs,
+  ], { cwd: tempRoot, env: { UNIBESTX_LOCAL_REPO: REPO_ROOT } });
+  record(caseName, /本地模板模式已开启/.test(viaEnv.stdout + viaEnv.stderr),
+    'UNIBESTX_LOCAL_REPO 环境变量可开启本地模板模式');
+
+  // 7) --no-local 优先，且此时不校验那条坏路径
+  const noLocal = await run([
+    'create', 'lr-nolocal',
+    '--no-local',
+    '--local-repo', path.join(tempRoot, 'no-such-repo'),
+    '--template', BRANCH,
+    ...baseArgs,
+  ], { cwd: tempRoot });
+  const noLocalOut = noLocal.stdout + noLocal.stderr;
+  record(caseName, !noLocalOut.includes('本地模板模式已开启'), '--no-local 关闭本地模板模式');
+  record(caseName, !noLocalOut.includes('不存在'), '--no-local 时不校验 --local-repo 的路径');
+
+  // 8) cwd 下有同名目录时，裸名仍按分支名解释并给出警告
+  const shadow = path.join(tempRoot, 'shadow');
+  fs.mkdirSync(path.join(shadow, BRANCH), { recursive: true });
+  const shadowed = await run([
+    'create', 'lr-shadow',
+    '--local-repo', REPO_ROOT,
+    '--template', BRANCH,
+    ...baseArgs,
+  ], { cwd: shadow });
+  const shadowOut = shadowed.stdout + shadowed.stderr;
+  record(caseName, shadowOut.includes('已按分支名'), `cwd 下有同名目录 ${BRANCH}/ 时给出按分支名解释的警告`);
+  record(caseName, shadowOut.includes(`#${BRANCH}`), '同名目录未顶替掉分支名语义');
 
   return caseName;
 }
@@ -374,8 +530,10 @@ async function runCase(testCase, tempRoot) {
   const create = await run([
     'create',
     projectName,
-    '--template',
+    '--local-repo',
     REPO_ROOT,
+    '--template',
+    BRANCH,
     ...testCase.args,
     '--no-install',
     '--yes',
@@ -462,11 +620,14 @@ async function runCase(testCase, tempRoot) {
 
 async function main() {
   const filter = process.argv[2];
-  const selected = filter
-    ? CASES.filter(c => c.name.includes(filter))
-    : CASES;
+  // 契约检查不是 CASES 里的用例，需要单独放行，否则会被「没有匹配」提前拦掉
+  const contractOnly = filter !== undefined
+    && ['contract', 'local-repo'].some(name => filter.includes(name));
+  const selected = filter === undefined || contractOnly
+    ? (contractOnly ? [] : CASES)
+    : CASES.filter(c => c.name.includes(filter));
 
-  if (selected.length === 0) {
+  if (selected.length === 0 && !contractOnly) {
     console.error(`没有匹配「${filter}」的用例`);
     process.exit(1);
   }
@@ -478,14 +639,17 @@ async function main() {
 
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'unibestx-smoke-'));
   console.log(`临时目录: ${tempRoot}`);
-  console.log(`模板来源: ${REPO_ROOT}`);
+  console.log(`模板来源: ${REPO_ROOT} #${BRANCH}（UNIBESTX_SMOKE_BRANCH 可覆盖分支）`);
 
   try {
     for (const testCase of selected) {
       await runCase(testCase, tempRoot);
     }
-    if (!filter) {
+    if (!filter || filter.includes('contract')) {
       await runContractChecks(tempRoot);
+    }
+    if (!filter || filter.includes('local-repo')) {
+      await runLocalRepoChecks(tempRoot);
     }
   }
   finally {

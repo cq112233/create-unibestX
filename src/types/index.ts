@@ -1,9 +1,6 @@
 /** 支持的包管理器 */
 export type PackageManager = 'pnpm' | 'npm' | 'yarn'
 
-/** 支持的平台类型 */
-export type Platform = 'web' | 'mp-weixin' | 'app-android' | 'app-ios' | 'app-harmony'
-
 /** 支持的 UI 库选项 */
 export type UILibrary = 'rice-ui' | 'uview-ultra' | 'none'
 
@@ -56,41 +53,37 @@ export type Replacement = {
   label?: string
 }
 
-/** 一个可勾选的功能 */
+/** 通用功能特性配置项（系统底座与扩展功能均统一使用该结构） */
 export type Feature = {
   key: string
   label: string
   hint?: string
   default: boolean
-  /** 未勾选时直接删除的文件/目录（相对项目根） */
+  /** 未勾选时直接删除的文件/目录（如分包目录、插件目录等，相对项目根） */
   removePaths?: string[]
-  /** 未勾选时执行的引用清理 */
+  /** 未勾选时执行的代码修剪 */
   patches?: PatchRule[]
   /** 未勾选时执行的精确文本替换 */
   replacements?: Replacement[]
-  /** 未勾选时用 templates/ 下的文件替换目标（目标路径 → 模板相对路径） */
-  replaceFiles?: Record<string, string>
   /** 未勾选时从 package.json 移除的依赖 */
   removeDeps?: string[]
   /** 未勾选时从 package.json 移除的 scripts */
   removeScripts?: string[]
 }
 
-/** 一个演示分包（src/sub/<dir>） */
-export type SubPackage = {
-  /** 目录名，如 'zpaging' */
-  dir: string
-  label: string
-  hint?: string
-  /** 该分包依赖的 uni_modules，未保留时一并删除 */
-  modules?: string[]
-  /** 未保留时删除的额外路径（页面目录之外的公共组件等） */
-  extraRemovePaths?: string[]
-  /** 未保留时执行的断链规则 */
-  patches?: PatchRule[]
-  /** 默认是否保留 */
-  default: boolean
-}
+export type TemplateMode = 'complex' | 'minimal'
+
+export type SystemBaseKey = 'i18n' | 'theme'
+
+export type ExtraFeatureKey =
+  | 'echarts'
+  | 'signature'
+  | 'rxjs'
+  | 'device'
+  | 'lodash'
+  | 'crypto'
+  | 'webview'
+  | 'nestedScroll'
 
 /**
  * 用户最终选定的生成配置
@@ -102,27 +95,22 @@ export type CreateOptions = {
    * 目标目录（原样来自位置参数，相对 cwd 或绝对路径）
    */
   targetDir: string
-  /** UI 库选择（rice-ui 或 uview-ultra） */
+  /** 模板模式：极简模式或复杂模式 */
+  templateMode?: TemplateMode
+  /** UI 库选择（rice-ui、uview-ultra 或 none） */
   uiLibrary?: UILibrary
-  /** 平台类型列表 */
-  platforms?: Platform[]
-  /** 功能 key 列表（已勾选的） */
+  /** 第三步：系统底座勾选项（i18n, theme） */
+  systemBase?: string[]
+  /** 第四步：扩展功能勾选项（echarts, signature, rxjs, device, lodash, crypto, webview） */
+  extraFeatures?: string[]
+  /** 功能 key 列表（已勾选的所有功能特性） */
   features: string[]
-  /** 保留的分包目录名列表 */
-  subPackages: string[]
-  /** 是否清理零引用 uni_modules */
-  cleanUnusedModules: boolean
+  /** 是否清理零引用 uni_modules（兼容参数） */
+  cleanUnusedModules?: boolean
   /** 模板来源：分支名或本地绝对路径 */
   template: string
   /** 包管理器 */
   packageManager: PackageManager
   /** 是否自动安装依赖 */
   install: boolean
-}
-
-/** 单次裁剪的统计 */
-export type PruneStats = {
-  removedPaths: string[]
-  appliedPatches: number
-  warnings: string[]
 }

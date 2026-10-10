@@ -21,7 +21,7 @@
 ## 📦 环境要求
 
 | 依赖 | 版本 | 说明 |
-|---|---|---|
+| --- | --- | --- |
 | Node.js | **≥ 20.12** | [@clack/prompts](https://www.npmjs.com/package/@clack/prompts) 的硬性要求 |
 | HBuilderX | **5.21+**（推荐 5.24） | 运行 `pnpm dev:*` 等 CLI 命令前**必须先启动**，CLI 本质是驱动 HBuilderX 完成跨端编译 |
 | Git | 任意近期版本 | 用于浅克隆模板仓库 |
@@ -54,38 +54,78 @@ bestx my-app
 pnpm create unibestx
 ```
 
-命令行将依次引导您选择：
+命令行将依次引导您完成 5 步交互：
 
-1. **项目名称**
-2. **项目模板**：完整模板（推荐）或极简模板
-3. **UI 组件库**（完整模板下才会询问）：Rice UI / uview-ultra / 无
-4. **功能特性**：多语言 i18n、ECharts 图表（登录鉴权与明暗主题为核心底座，无需勾选）
-5. **是否立即安装依赖**
+1. **项目名称**：输入并校验合法英文标识；
+2. **第一步（模板模式）**：复杂模式（推荐，进入后续配置） / 极简模式（直接拉取 base 分支纯净基线）；
+3. **第二步（UI 组件库）**：Rice UI（默认推荐） / uview-ultra / 无 UI 库；
+4. **第三步（系统底座）**：多选 i18n 国际化、theme 主题色（默认全选）；
+5. **第四步（扩展功能）**：多选 lodash, echarts, z-paging-x, crypto, dayuts, webview 等（默认全选）；
+6. **第五步（预留与包管理器）**：配置包管理器（pnpm / npm / yarn）及是否立即安装依赖。
 
-选择极简模板时会跳过第 3、4 步，直接落到 `base` 分支的干净基线。
+选择极简模式时，将跳过第 2~5 步，直接落到 `base` 分支零冗余骨架。
 
-> **演示分包不参与交互提问**，未传 `--subs` 时默认全部裁掉。想保留演示分包，必须在命令行上显式指定。
->
-> 非交互式终端（如 CI）下必须显式指定 `--features`，否则脚手架会直接报错并提示可选值；只想用默认配置可以加 `--yes`。
+---
 
 ### 3. 命令行快捷参数（CI / 极速创建）
 
 ```bash
-# 推荐组合：Rice UI + 多语言 + ECharts + 全部演示分包
-pnpm create unibestx my-app -u rice-ui --features i18n,echarts --subs all
+# 推荐组合：Rice UI + 开启指定功能
+pnpm create unibestx my-app -u rice-ui --features i18n,theme,lodash,echarts
 
-# 极简模式：移除所有可选功能与演示分包，仅留 4 个 Tab 纯净骨架
-pnpm create unibestx my-app --features none --subs none
-
-# 只保留少数几个演示分包
-pnpm create unibestx my-app --features all --subs crypto,time,zpaging
+# 极简模式：直接使用 base 纯净分支
+pnpm create unibestx my-app --template base
 
 # 跳过提问，使用默认推荐配置快速生成
 pnpm create unibestx my-app --yes
 
-# 使用本地模板仓库（适合内网或离线开发）
-pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
+
+# 调试本地模板仓库（推荐：按分支取，本地未提交改动也会生效）
+export UNIBESTX_LOCAL_REPO=/Users/chenqi/Desktop/unibestX
+pnpm create unibestx my-app
+
+# 单次指定，并显式选分支
+pnpm create unibestx my-app --local-repo /Users/chenqi/Desktop/unibestX --template uniX-uview-ultra
+
+# 指向某个具体目录（指哪个目录拷哪个目录，不吃分支语义）
+pnpm create unibestx my-app --no-local --template /Users/chenqi/Desktop/unibestX
 ```
+
+---
+
+## 🧪 本地模板仓库调试（`--local-repo`）
+
+unibestX 仓库有多条并列分支（`main` / `uniX-uview-ultra` / `uniX-rice-ui` / `base`），
+而工作区同一时刻只能停在一条上。`--local-repo` 让脚手架**按分支名**从本地仓库取内容，
+既不会串分支，也不会因为工作区停在别的分支而拿错模板。
+
+```bash
+# 方式一：环境变量常开（配一次，之后所有创建都走本地）
+export UNIBESTX_LOCAL_REPO=/Users/chenqi/Desktop/unibestX
+pnpm create unibestx my-app                      # 取默认的 uniX-rice-ui 分支
+pnpm create unibestx my-app -u uview-ultra       # 取 uniX-uview-ultra 分支
+
+# 方式二：命令行单次指定
+pnpm create unibestx my-app --local-repo /Users/chenqi/Desktop/unibestX --template uniX-uview-ultra
+
+# 临时改回远程拉取
+pnpm create unibestx my-app --no-local
+```
+
+**取内容的规则**（日志会明确告诉你走了哪条）：
+
+| 情况 | 取到的内容 | 日志 |
+|---|---|---|
+| 工作区正好在请求的分支上 | 直接拷工作区，**含未提交改动** | `（工作区，含 N 处未提交改动）` |
+| 工作区在别的分支上 | `git clone --local` 取该分支**已提交**内容 | `（本地克隆，仅已提交内容）` |
+
+> 想边改模板边测生成，就先 `cd` 到 unibestX 切到目标分支再创建 —— 这条路径会带上你未提交的改动。
+> 取分支用的是 `git clone --local`（对象库硬链接），不会改动你的仓库，也不会复制那 1.4 GB 的 `.git`。
+
+**配置解析优先级**：`--no-local` > `--local-repo <path>` > `--local-repo`（取环境变量）> `UNIBESTX_LOCAL_REPO`。
+
+**出错即停，不静默回落远程** —— 路径不存在、不是 git 仓库、分支本地没有，都会直接报错退出
+（分支不存在时会列出可用分支）。这是刻意的：静默回落会让你以为在测 A，实际在测 B。
 
 ---
 
@@ -96,7 +136,9 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
 | `--ui` | `-u` | 指定 UI 库与模板基线 | `rice-ui`（默认，推荐），`uview-ultra`，`none`（无 UI 库） |
 | `--features` | `-f` | 显式指定要启用的功能列表（**功能开关的唯一入口**） | `i18n,echarts` / `none`（全不选）/ `all`（全选） |
 | `--subs` | - | 显式指定要保留的演示分包 | 分包目录名逗号分隔 / `none` / `all` |
-| `--template` | - | 模板来源（分支名或本地路径） | `uniX-rice-ui`（Rice UI，默认）、`uniX-uview-ultra`、`main`（无 UI 库）、`base`（极简模板）、本地路径 |
+| `--template` | `-t` | 模板来源（分支名或本地路径） | `uniX-rice-ui`（Rice UI，默认）、`uniX-uview-ultra`、`main`（无 UI 库）、`base`（极简模板）、本地路径 |
+| `--local-repo` | - | 本地模板仓库路径。设了之后按 `--template` 的分支名从本地仓库取内容；不带值读 `UNIBESTX_LOCAL_REPO` | `/Users/chenqi/Desktop/unibestX` |
+| `--no-local` | - | 单次关闭本地模板模式，临时改回远程拉取 | - |
 | `--keep-unused-modules` | - | 保留零引用的 `uni_modules`（默认会自动清理精简） | - |
 | `--package-manager` | `-m` / `--pm` | 指定包管理器 | `pnpm`（默认）、`npm`、`yarn` |
 | `--no-install` | - | 生成后不自动安装依赖 | - |
@@ -144,7 +186,7 @@ pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX
     "features": ["echarts", "i18n"],   // 勾选的功能
     "subPackages": ["crypto", "time"], // 保留的演示分包
     "cleanUnusedModules": true,        // 是否清理了零引用 uni_modules
-    "template": "uniX-rice-ui",        // 模板来源，本地模板记为 "local"
+    "template": "local:uniX-rice-ui",   // 模板来源：远程分支名 / local:<分支> / local（字面目录）
     "createdAt": "2026-09-30T04:00:00.000Z",
     "cliVersion": "1.0.0"
   }

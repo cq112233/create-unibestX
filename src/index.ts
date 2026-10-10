@@ -21,20 +21,25 @@ async function main(): Promise<void> {
       'template',
       'package-manager',
       'ui',
+      'local-repo',
     ],
+    // 注意：`local` 刻意不放进 boolean。
+    // 一旦声明为 boolean，minimist 在**没传 --no-local 时也会把它置为 false**，
+    // 于是「用户显式关闭本地模式」和「用户没提这回事」变得无法区分。
+    // 不声明时，--no-local 走 minimist 的取反分支得到 false，未传则是 undefined。
     alias: {
       h: 'help',
       v: 'version',
       y: 'yes',
       u: 'ui',
-      p: 'platform',
-      l: 'login',
-      i: 'i18n',
       f: 'features',
       t: 'template',
       m: 'package-manager',
       pm: 'package-manager',
     },
+    // 注意：别名只保留真正被消费的那些。
+    // `-p/-l/-i` 曾分别指向 platform/login/i18n，但这三个值全项目无人读取，
+    // 属于「解析了但不生效」的装饰参数，已一并移除，避免 help 显得能用。
   })
 
   // 1. 版本与帮助信息

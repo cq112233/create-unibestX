@@ -29,9 +29,9 @@ function walkUp(predicate: (dir: string) => boolean): string | null {
 
 /** 包根目录（templates/ 的父级） */
 export function findPackageRoot(): string {
-  const root = walkUp(dir => existsSync(path.join(dir, 'templates')))
+  const root = walkUp(dir => existsSync(path.join(dir, 'package.json')))
   if (root === null) {
-    throw new Error(`定位不到包根目录（从 ${here} 向上查找 templates/ 失败）`)
+    throw new Error(`定位不到包根目录（从 ${here} 向上查找 package.json 失败）`)
   }
   return root
 }

@@ -1,18 +1,39 @@
+/**
+ * 【阶段二：收尾同步与元信息写入】
+ *
+ * 负责在裁剪与自检通过后，对新生成项目的工程配置文件进行最终规范化同步：
+ * 1. 更新 package.json：
+ *    - 将 name 改为用户指定的项目名，重置 version 为 1.0.0；
+ *    - 移除已裁剪功能关联的依赖项（dependencies / devDependencies）与 scripts 脚本；
+ *    - 写入 unibestx 官方元数据对象（记录本次生成所勾选的功能、UI 库、模板分支、时间戳与 CLI 版本）；
+ * 2. 更新 .env 环境变量：
+ *    - 将 VITE_APP_TITLE 对齐为用户实际的项目名称；
+ * 3. 产物规范化：确保生成后的工程开箱即用，随时可以提交或分发。
+ */
 import { existsSync } from 'node:fs'
 import path from 'node:path'
 import type { PruneResult } from './prune'
 import type { CreateOptions } from '../types'
 import { fs, readJson, writeJson } from '../utils/fs'
 
+
 /** 写在生成物 `package.json` 里的元信息字段 */
 export type UnibestxMeta = {
   /** 生成时勾选的 feature key */
   features: string[]
-  /** 保留的分包目录名 */
-  subPackages: string[]
-  /** 是否清理了零引用 uni_modules */
-  cleanUnusedModules: boolean
-  /** 模板来源：分支名，或 'local' */
+  /** 模板模式 */
+  templateMode?: string
+  /** UI 组件库 */
+  uiLibrary?: string
+  /**
+   * 模板来源标签
+   *
+   * - 远程分支：`uniX-rice-ui`
+   * - 本地分支：`local:uniX-rice-ui`
+   * - 字面目录拷贝：`local`
+   *
+   * 只记分支名不记绝对路径 —— 生成物是要被提交和分享的。
+   */
   template: string
   /** 生成时间（ISO 8601） */
   createdAt: string
@@ -20,23 +41,22 @@ export type UnibestxMeta = {
   cliVersion: string
 }
 
-function isLocalTemplate(template: string): boolean {
-  return path.isAbsolute(template) || template.startsWith('./') || template.startsWith('../')
-}
-
 /**
  * 收尾
+ *
+ * `templateLabel` 来自 acquireTemplate 解析出的来源，不在这里靠路径形态反推。
  */
 export async function finalize(
   projectRoot: string,
   options: CreateOptions,
   pruneResult: PruneResult,
   cliVersion: string,
+  templateLabel: string,
   step: (msg: string) => void,
   warn: (msg: string) => void,
 ): Promise<void> {
   step('重写 package.json')
-  await rewritePackageJson(projectRoot, options, pruneResult, cliVersion)
+  await rewritePackageJson(projectRoot, options, pruneResult, cliVersion, templateLabel)
 
   step('对齐 .env')
   await rewriteEnv(projectRoot, options, warn)
@@ -47,6 +67,7 @@ async function rewritePackageJson(
   options: CreateOptions,
   pruneResult: PruneResult,
   cliVersion: string,
+  templateLabel: string,
 ): Promise<void> {
   const abs = path.join(projectRoot, 'package.json')
   const pkg = await readJson<Record<string, any>>(abs)
@@ -62,11 +83,17 @@ async function rewritePackageJson(
     delete pkg.scripts?.[script]
   }
 
+  // 移除 docs 文档网站相关脚本与依赖
+  delete pkg.scripts?.['docs:dev']
+  delete pkg.scripts?.['docs:build']
+  delete pkg.scripts?.['docs:preview']
+  delete pkg.devDependencies?.vitepress
+
   pkg.unibestx = {
     features: [...options.features].sort(),
-    subPackages: [...options.subPackages].sort(),
-    cleanUnusedModules: options.cleanUnusedModules,
-    template: isLocalTemplate(options.template) ? 'local' : options.template,
+    templateMode: options.templateMode,
+    uiLibrary: options.uiLibrary,
+    template: templateLabel,
     createdAt: new Date().toISOString(),
     cliVersion,
   } satisfies UnibestxMeta

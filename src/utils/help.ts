@@ -1,5 +1,4 @@
 import { blue, cyan, green, yellow } from 'kolorist'
-import { UNUSED_MODULES } from '../manifest'
 
 export function printHelp(): void {
   console.log(`
@@ -23,24 +22,19 @@ export function printHelp(): void {
 
   ${blue('创建选项:')}
   ${green('  -u, --ui <library>         指定 UI 库：rice-ui (推荐)、uview-ultra 或 none (无)')}
-  ${green('  -p, --platform <types>     支持平台：web, mp-weixin, app-android, app-ios, app-harmony')}
-  ${green('                             支持逗号分隔或多选：-p web,mp-weixin')}
-  ${green('  -l, --login                启用登录鉴权与路由守卫（--no-login 为禁用）')}
-  ${green('  -i, --i18n                 启用多语言 i18n（--no-i18n 为禁用）')}
-  ${green('  -t, --theme                启用主题切换卡片')}
-  ${green('  --echarts                  启用 ECharts 图表')}
-  ${green('  --features <list>          功能开关列表（none = 全不选，all = 全选）')}
-  ${green('  --template <source>        模板来源（分支名如 uniX-rice-ui / uniX-uview-ultra / main，或本地目录路径）')}
-  ${green(`  --keep-unused-modules      保留 ${UNUSED_MODULES.length} 个零引用 uni_modules（默认会自动清理精简）`)}
+  ${green('  -f, --features <list>      功能开关的入口（none = 全不选，all = 全选，或逗号分隔）')}
+  ${green('  -t, --template <source>    模板来源（分支名如 uniX-rice-ui / uniX-uview-ultra / main / base，或本地路径）')}
+  ${green('  --local-repo <path>        本地模板仓库路径。设了之后按 --template 的分支名从本地仓库取内容')}
+  ${green('                             不带值时读 UNIBESTX_LOCAL_REPO 环境变量；环境变量即常开')}
+  ${green('  --keep-unused-modules      保留全部 uni_modules（跳过依赖检测）')}
   ${green('  -m, --package-manager      指定包管理器 (pnpm, npm, yarn)')}
   ${green('  --no-install               生成后不自动安装依赖')}
   ${green('  -y, --yes                  快速生成（使用默认配置跳过交互提问）')}
+  ${green('  --keep-on-fail             自检失败时保留生成物现场，便于排查（默认自动回滚）')}
 
   ${blue('可选的功能特性 (Features):')}
-  ${yellow('  i18n                       多语言国际化支持')}
-  ${yellow('  theme                      明暗主题切换与 CSS 变量驱动')}
-  ${yellow('  auth                       登录鉴权 + 路由守卫 + 401 拦截')}
-  ${yellow('  echarts                    ECharts 图表全端兼容支持')}
+  ${yellow('  系统底座: i18n, theme')}
+  ${yellow('  扩展功能: echarts, signature, rxjs, device, lodash, crypto, webview, nestedScroll')}
 
   ${blue('示例:')}
   ${green('  # 交互式引导创建')}
@@ -48,14 +42,19 @@ export function printHelp(): void {
   ${cyan('  pnpm create unibestx my-app')}
 
   ${green('  # 快捷参数创建：指定 UI 库与功能')}
-  ${cyan('  pnpm create unibestx my-app -u rice-ui -l -i')}
-  ${cyan('  pnpm create unibestx my-app -u uview-ultra -p web,mp-weixin')}
+  ${cyan('  pnpm create unibestx my-app -u rice-ui -f i18n,theme,echarts')}
+  ${cyan('  pnpm create unibestx my-app -u uview-ultra -f lodash,crypto')}
 
-  ${green('  # 极简模式：无演示分包与扩展功能')}
-  ${cyan('  pnpm create unibestx my-app --features none --subs none')}
+  ${green('  # 极简模式：直接拉取纯净 base 分支')}
+  ${cyan('  pnpm create unibestx my-app --template base')}
 
-  ${green('  # 离线或本地模板创建')}
-  ${cyan('  pnpm create unibestx my-app --template /Users/chenqi/Desktop/unibestX')}
+  ${green('  # 调试本地模板仓库（按分支从本地取，未提交改动也会生效）')}
+  ${cyan('  export UNIBESTX_LOCAL_REPO=/Users/chenqi/Desktop/unibestX')}
+  ${cyan('  pnpm create unibestx my-app -u rice-ui')}
+  ${cyan('  pnpm create unibestx my-app --local-repo /Users/chenqi/Desktop/unibestX --template uniX-uview-ultra')}
+
+  ${green('  # 离线或指定模板目录（指哪个目录拷哪个目录）')}
+  ${cyan('  pnpm create unibestx my-app --no-local --template /Users/chenqi/Desktop/unibestX')}
 
   ${green('  # 自检项目完整性')}
   ${cyan('  pnpm create unibestx doctor')}
