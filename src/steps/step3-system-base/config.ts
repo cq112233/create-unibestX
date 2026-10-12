@@ -15,8 +15,13 @@ export const SYSTEM_BASE_ITEMS: Feature[] = [
       'uni_modules/lime-i18n',
       'src/i18n',
       'src/sub/langBasicDemo',
-      'src/store/vapor/i18n.ts',
+      // 注意：模板已把 src/store/vapor/*.ts 改名为 .uts（仅 base 分支仍是 .ts，
+      // 而 base 走极简模式、不经过 prune），写成 .ts 会导致文件留下、其内部
+      // import 的 src/i18n 已被删掉，生成后被自检判为悬空 import 而整体回滚。
+      'src/store/vapor/i18n.uts',
       'src/store/vdom/i18n.uts',
+      // 单元测试直接 import src/i18n 内部模块，不跟着删同样会悬空
+      'tests/unit/utils/i18n-text.test.ts',
     ],
     patches: [
       {
@@ -42,7 +47,8 @@ export const SYSTEM_BASE_ITEMS: Feature[] = [
       'theme.json',
       'src/theme',
       'src/sub/themeBasicDemo',
-      'src/store/vapor/theme.ts',
+      // 同 i18n：模板 vapor store 已改名 .uts，写 .ts 会让 theme store 残留
+      'src/store/vapor/theme.uts',
       'src/store/vdom/theme.uts',
     ],
   },

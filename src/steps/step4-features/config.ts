@@ -4,13 +4,31 @@ import type { Feature } from '../../types'
  * 第四步：扩展功能定义与裁剪配置（对齐 FunctionView 业务演示列表）
  * 注意：
  * - z-paging-x（原生分页与嵌套滚动）为项目核心底座，永久保留，不提供取消勾选项；
- * - lime-dayuts（Time 时间日期处理）为核心依赖底座，永久保留，不提供取消勾选项。
+ * - RxJS 响应式流（UTS 自研 rxjs-lite，被 src/http/stream/stream.uts 依赖）同样内置恒留，
+ *   其演示分包 src/sub/rxjsFunctionDemo 永不裁剪。
  *
  * 供用户自由选配的可选扩展能力：
- * 包含：echarts, signature, rxjs, device, lodash, crypto, webview
- * 默认都不选中
+ * 包含：time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview
+ * 其中 time（lime-dayuts 时间日期处理）为日期时间高频底座，默认勾选；
+ * 其余默认都不选中。
+ *
+ * 跨分支注意：uniX-uview-ultra 分支的 uni_modules/uview-ultra/package.json 声明了
+ * uni_modules.dependencies: ['lime-dayuts']，取消勾选 time 时 resolveModuleClosure
+ * 会自动保护插件本体（只清演示分包），不会产生悬空引用。
+ *
+ * 不进选项列表、永远裁剪的演示资产见 ALWAYS_PRUNE_FEATURE_ASSETS（signature / device / nestedScroll）。
  */
 export const EXTRA_FEATURE_ITEMS: Feature[] = [
+  {
+    key: 'time',
+    label: 'lime-dayuts 时间日期处理',
+    hint: 'dayjs 的 UTS 移植版：日期解析与格式化、增减计算、相对时间与时间戳转换，内置中英双语 locale',
+    default: true,
+    removePaths: [
+      'uni_modules/lime-dayuts',
+      'src/sub/timeFunctionDemo',
+    ],
+  },
   {
     key: 'echarts',
     label: 'ECharts 跨端图表',
@@ -22,41 +40,43 @@ export const EXTRA_FEATURE_ITEMS: Feature[] = [
     ],
   },
   {
-    key: 'signature',
-    label: 'lime-signature 签名板',
-    hint: '平滑笔迹书写、画笔粗细与颜色调节、撤销重做与图片保存',
+    key: 'limeShared',
+    label: 'lime-shared 工具函数',
+    hint: '浮点精度、序列生成、唯一标识、数组去重切片、路径取值、命名转换与深比较',
     default: false,
     removePaths: [
-      'uni_modules/lime-signature',
-      'src/sub/signatureFunctionDemo',
+      'src/sub/limeSharedFunctionDemo',
     ],
   },
   {
-    key: 'rxjs',
-    label: 'RxJS 响应式流',
-    hint: 'UTS 自研 rxjs-lite，防抖节流、流式接收与订阅管理',
+    key: 'limeUse',
+    label: 'lime-use 组合式函数',
+    hint: 'useCountDown、useCodeTimer、useTimeout 与 useZIndex 四个常用组合式函数',
     default: false,
     removePaths: [
-      'src/sub/rxjsFunctionDemo',
+      'uni_modules/lime-use',
+      'src/sub/limeUseFunctionDemo',
     ],
   },
   {
-    key: 'device',
-    label: '原生设备与系统能力',
-    hint: '拨号分享、文件文档预览、触感震动、键盘避让与相机扫码',
+    key: 'limeColor',
+    label: 'lime-color 颜色工具',
+    hint: '颜色格式互转、亮度饱和度调整、配色方案生成与 Ant Design 主题色阶',
     default: false,
     removePaths: [
-      'src/sub/deviceFunctionDemo',
+      'src/sub/limeColorFunctionDemo',
     ],
   },
   {
-    key: 'lodash',
-    label: 'Lodash 工具库',
-    hint: '数组切片去重、对象深拷贝、驼峰转换与函数防抖节流 (iRainna-lodash)',
+    key: 'bignumber',
+    label: 'BigNumber 大数据运算',
+    hint: '任意精度十进制运算：加减乘除、浮点误差对照、除法精度、幂与开方、进制转换与九种舍入模式 (unix-Bignumber)',
     default: false,
     removePaths: [
-      'uni_modules/iRainna-lodash',
-      'src/sub/lodashFunctionDemo',
+      'uni_modules/unix-Bignumber',
+      'src/sub/bignumberFunctionDemo',
+      // 模板的单元测试直接 import 插件本体，不跟着删会悬空、生成后被自检回滚
+      'tests/unit/modules/bignumber.test.ts',
     ],
   },
   {
@@ -78,16 +98,6 @@ export const EXTRA_FEATURE_ITEMS: Feature[] = [
       'src/sub/webviewFunctionDemo',
       'static/webview',
       'hybrid',
-    ],
-  },
-  {
-    key: 'nestedScroll',
-    label: 'NestedScroll 自研嵌套滚动',
-    hint: '自研原生手势联通与平滑衔接，彻底消除双重滚动冲突',
-    default: false,
-    removePaths: [
-      'src/components/NestedScroll',
-      'src/sub/nestedScrollFunctionDemo',
     ],
   },
 ]

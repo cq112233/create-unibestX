@@ -5,7 +5,8 @@
  * 1. 更新 package.json：
  *    - 将 name 改为用户指定的项目名，重置 version 为 1.0.0；
  *    - 移除已裁剪功能关联的依赖项（dependencies / devDependencies）与 scripts 脚本；
- *    - 写入 unibestx 官方元数据对象（记录本次生成所勾选的功能、UI 库、模板分支、时间戳与 CLI 版本）；
+ *    - 写入 unibestx 官方元数据对象（记录本次生成所勾选的功能、UI 库、模板分支、
+ *      模块清理策略、时间戳与 CLI 版本）；
  * 2. 更新 .env 环境变量：
  *    - 将 VITE_APP_TITLE 对齐为用户实际的项目名称；
  * 3. 产物规范化：确保生成后的工程开箱即用，随时可以提交或分发。
@@ -35,6 +36,14 @@ export type UnibestxMeta = {
    * 只记分支名不记绝对路径 —— 生成物是要被提交和分享的。
    */
   template: string
+  /**
+   * 是否清理零引用 uni_modules
+   *
+   * 记录 `--keep-unused-modules` 的实际取值（默认 true）：与该开关相反。
+   * 之所以要落到元信息里，是因为它决定了生成物里 uni_modules 是否被依赖闭包裁剪过，
+   * 事后看目录根本分不出来 —— 也便于回归测试断言该开关真的被读取。
+   */
+  cleanUnusedModules: boolean
   /** 生成时间（ISO 8601） */
   createdAt: string
   /** CLI 版本 */
@@ -94,6 +103,7 @@ async function rewritePackageJson(
     templateMode: options.templateMode,
     uiLibrary: options.uiLibrary,
     template: templateLabel,
+    cleanUnusedModules: options.cleanUnusedModules !== false,
     createdAt: new Date().toISOString(),
     cliVersion,
   } satisfies UnibestxMeta

@@ -17,8 +17,8 @@
 - 🪶 **极简模式 (Minimal)** - 另有 `base` 分支纯净骨架，零冗余代码，跳过 UI 库与功能裁剪，适合从零定制搭建
 - 🧩 **按需功能裁剪与解耦**：
   - **系统底座（默认全选）**：可自主选配 **i18n 国际化**（未勾选时自动降级纯中文直出）、**theme 主题色**（未勾选时自动降级静态默认单色）；
-  - **扩展功能（按需勾选）**：ECharts 图表、lime-signature 签名板、RxJS 响应式流、设备与系统能力、Lodash 工具库、Crypto 加解密、WebView 双向通讯、NestedScroll 嵌套滚动等 8 项高频能力；
-  - **核心底座（恒定内置）**：登录鉴权与路由守卫（auth / 路由拦截器）、`z-paging-x` 原生分页插件本体、`lime-dayuts` 时间日期处理永久内置，开箱即用。
+  - **扩展功能（按需勾选）**：lime-dayuts 时间日期处理（**默认勾选**）、ECharts 图表、lime-shared 工具函数、lime-use 组合式函数、lime-color 颜色工具、BigNumber 大数据运算、Crypto 加解密、WebView 双向通讯等 8 项高频能力；
+  - **核心底座（恒定内置）**：登录鉴权与路由守卫（auth / 路由拦截器）、`z-paging-x` 原生分页插件本体永久内置，开箱即用。
 - 🧹 **演示视图智能联动** - 未勾选的功能特性不仅彻底清理源码与插件，还将自动同步剔除 `FunctionView` 业务演示列表中的入口按钮，代码零悬空
 - 🛡️ **四查自检保障** - 生成后自动执行完整性诊断（悬空 Import、悬空组件标签、路由一致性、依赖一致性），任一错误即自动回滚，保障生成物 100% 健壮
 - 🌐 **双源镜像与本地调试** - 默认走 Gitee 极速源，失败自动切换 GitHub 备份；支持 `--local-repo` 从本地工作区或分支秒级克隆，调试极速无网络延迟
@@ -67,7 +67,7 @@ pnpm create unibestx
 2. **第一步（模板模式）**：复杂模式（推荐，进入后续定制） / 极简模式（直接拉取 base 分支纯净骨架）；
 3. **第二步（UI 组件库）**：Rice UI（默认推荐） / uview-ultra / 无 UI 库；
 4. **第三步（系统底座）**：多选 i18n 国际化、theme 主题色（默认全选）；
-5. **第四步（扩展功能）**：多选 ECharts、签名板、RxJS、设备能力、Lodash、Crypto、WebView、NestedScroll（默认全不选，按需勾选）；
+5. **第四步（扩展功能）**：多选 lime-dayuts 时间日期处理（**默认勾选**）、ECharts、lime-shared、lime-use、lime-color、BigNumber、Crypto、WebView（除 lime-dayuts 外默认全不选，按需勾选）；
 6. **第五步（预留与包管理器）**：配置包管理器（pnpm / npm / yarn）及是否立即安装依赖。
 
 > 选择极简模式时，将直接跳过第 2~5 步，落到 `base` 分支零冗余骨架。
@@ -81,7 +81,7 @@ pnpm create unibestx
 pnpm create unibestx my-app -u rice-ui -f i18n,theme,echarts
 
 # 指定 UI 库与按需扩展特性
-pnpm create unibestx my-app -u uview-ultra -f lodash,crypto
+pnpm create unibestx my-app -u uview-ultra -f crypto,webview
 
 # 极简模式：直接使用 base 纯净分支
 pnpm create unibestx my-app --template base
@@ -170,18 +170,21 @@ pnpm create unibestx my-app --no-local
 
 ### 2. 扩展功能（Extra Features）
 
-对齐功能页 `FunctionView` 的业务演示能力，**默认全不选**，用户按需勾选或通过 `--features` 指定：
+对齐功能页 `FunctionView` 的业务演示能力，除 `time` 外**默认全不选**，用户按需勾选或通过 `--features` 指定：
 
-| 特性 Key | 名称与说明 | 包含插件 / 目录 |
-| --- | --- | --- |
-| `echarts` | **ECharts 跨端图表**（折线图、柱状图、饼图跨端渲染） | `uni_modules/e-chart`, `src/sub/echartsFunctionDemo` |
-| `signature` | **lime-signature 签名板**（手写签名板、画笔调节、撤销重做与保存） | `uni_modules/lime-signature`, `src/sub/signatureFunctionDemo` |
-| `rxjs` | **RxJS 响应式流**（UTS 自研 rxjs-lite，防抖节流与流式传输） | `src/sub/rxjsFunctionDemo` |
-| `device` | **原生设备能力**（拨号、分享、文件预览、震动、键盘、扫码等） | `src/sub/deviceFunctionDemo` |
-| `lodash` | **Lodash 工具库**（深拷贝、去重、防抖节流与高频工具函数） | `uni_modules/iRainna-lodash`, `src/sub/lodashFunctionDemo` |
-| `crypto` | **Crypto 加密解密**（MD5、AES、DES、SHA-256、HMAC、Base64） | `uni_modules/unix-crypto`, `src/sub/cryptoFunctionDemo` |
-| `webview` | **WebView 双向通讯**（网页内嵌、跨端 postMessage 与 evalJS 交互） | `src/sub/webviewFunctionDemo`, `static/webview`, `hybrid` |
-| `nestedScroll` | **NestedScroll 自研嵌套滚动**（解决双重原生滚动冲突，平滑衔接） | `src/components/NestedScroll`, `src/sub/nestedScrollFunctionDemo` |
+| 特性 Key | 名称与说明 | 默认状态 | 包含插件 / 目录 |
+| --- | --- | --- | --- |
+| `time` | **lime-dayuts 时间日期处理**（日期解析与格式化、增减计算、相对时间与时间戳转换） | ✅ 默认开启 | `uni_modules/lime-dayuts`, `src/sub/timeFunctionDemo` |
+| `echarts` | **ECharts 跨端图表**（折线图、柱状图、饼图跨端渲染） | ⬜ | `uni_modules/e-chart`, `src/sub/echartsFunctionDemo` |
+| `limeShared` | **lime-shared 工具函数**（浮点精度、序列生成、唯一标识、去重切片与深比较） | ⬜ | `src/sub/limeSharedFunctionDemo` |
+| `limeUse` | **lime-use 组合式函数**（useCountDown、useCodeTimer、useTimeout、useZIndex） | ⬜ | `uni_modules/lime-use`, `src/sub/limeUseFunctionDemo` |
+| `limeColor` | **lime-color 颜色工具**（颜色格式互转、明暗调整、配色生成与主题色阶） | ⬜ | `src/sub/limeColorFunctionDemo` |
+| `bignumber` | **BigNumber 大数据运算**（任意精度加减乘除、幂与开方、进制转换与九种舍入模式） | ⬜ | `uni_modules/unix-Bignumber`, `src/sub/bignumberFunctionDemo` |
+| `crypto` | **Crypto 加密解密**（MD5、AES、DES、SHA-256、HMAC、Base64） | ⬜ | `uni_modules/unix-crypto`, `src/sub/cryptoFunctionDemo` |
+| `webview` | **WebView 双向通讯**（网页内嵌、跨端 postMessage 与 evalJS 交互） | ⬜ | `src/sub/webviewFunctionDemo`, `static/webview`, `hybrid` |
+
+> `time` 取消勾选时会一并清理 `uni_modules/lime-dayuts` 与 `src/sub/timeFunctionDemo`。
+> 在 `uniX-uview-ultra` 模板下，`uview-ultra` 自身声明了 `uni_modules.dependencies: ['lime-dayuts']`（`up-calendar` / `up-datetime-picker` 直接依赖），脚手架会自动保护插件本体、只清理演示分包，不会产生悬空引用。
 
 ### 3. 常驻核心底座（不可裁剪）
 
@@ -189,7 +192,19 @@ pnpm create unibestx my-app --no-local
 
 - **登录鉴权与路由守卫（auth / 路由拦截器）**：包含 `src/sub/auth` 登录页、路由拦截与全局 401 守卫；
 - **z-paging-x 原生分页插件**：`uni_modules/z-paging-x` 核心列表底座开箱即用，`<z-paging-x>` 标签全局可用；
-- **lime-dayuts 时间日期处理**：核心日期时间工具库。
+- **RxJS 响应式流（rxjs-lite）**：UTS 自研的响应式流实现，被 `src/http/stream/stream.uts` 依赖，其演示分包 `src/sub/rxjsFunctionDemo` 同样恒留。
+
+### 4. 永久裁剪的演示资产（不提供勾选项）
+
+以下演示分包与组件已从第四步选配项中移除，**任何勾选组合下都会被删掉**，`--features` 里也不再接受对应 key：
+
+| 原特性 Key | 名称 | 会被删除的路径 |
+| --- | --- | --- |
+| `signature` | lime-signature 签名板 | `uni_modules/lime-signature`, `src/sub/signatureFunctionDemo` |
+| `device` | 原生设备与系统能力 | `src/sub/deviceFunctionDemo` |
+| `nestedScroll` | NestedScroll 自研嵌套滚动 | `src/components/NestedScroll`, `src/sub/nestedScrollFunctionDemo` |
+
+`lime-shared` 与 `lime-color` 两个插件**不在**裁剪清单里：它们是 `lime-icon` / `lime-style` 的依赖，取消勾选对应 Demo 时插件本体必须保留。
 
 ---
 

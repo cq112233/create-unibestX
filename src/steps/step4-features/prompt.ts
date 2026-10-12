@@ -5,9 +5,9 @@ import type { Step4Result } from './types'
 
 /**
  * 第四步：多选扩展功能（对齐 FunctionView 功能演示页）
- * 包含：echarts, signature, rxjs, device, lodash, crypto, webview
- * （注意：z-paging-x 原生分页与 lime-dayuts 时间操作为核心内置，无需勾选）
- * 默认全选
+ * 包含：time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview
+ * （注意：z-paging-x 原生分页为核心内置，无需勾选）
+ * 默认仅勾选 time（lime-dayuts 时间日期处理），其余默认不选
  */
 export async function promptStep4Features(): Promise<Step4Result> {
   const choice = await p.multiselect({

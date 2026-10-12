@@ -1,12 +1,12 @@
 export type ExtraFeatureKey =
+  | 'time'
   | 'echarts'
-  | 'signature'
-  | 'rxjs'
-  | 'device'
-  | 'lodash'
+  | 'limeShared'
+  | 'limeUse'
+  | 'limeColor'
+  | 'bignumber'
   | 'crypto'
   | 'webview'
-  | 'nestedScroll'
 
 export type Step4Result = {
   extraFeatures: string[]

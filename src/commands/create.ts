@@ -7,6 +7,7 @@ import * as p from '@clack/prompts'
 import { bold, green, yellow } from 'kolorist'
 import { acquireTemplate } from '../steps/acquire'
 import type { TemplateSource } from '../steps/acquire'
+import { getBranchByUILibrary } from '../steps/step2-ui/config'
 import { finalize } from '../steps/finalize'
 import { promptCreateOptions, printNextSteps } from '../steps/prompt'
 import { prune } from '../steps/prune'
@@ -142,6 +143,10 @@ export async function createCommand(
         logger.warn(message)
       }
       logger.info(describeSource(result.source))
+      const mismatch = describeUIMismatch(result.source, options)
+      if (mismatch !== null) {
+        logger.warn(mismatch)
+      }
     })
 
     // 判断是否为极简模式（base 分支本身就是纯净基线，零冗余代码）
@@ -271,6 +276,33 @@ function describeSource(source: TemplateSource): string {
     case 'git':
       return `模板仓库: ${source.repo} #${source.branch}`
   }
+}
+
+/**
+ * 字面目录模板与所选 UI 库不一致时，返回一句提醒（一致则返回 null）
+ *
+ * `--template <路径>` 的语义是「指哪个目录就拷哪个目录」，而且它的优先级高于第二步的
+ * UI 选择（prompt.ts 里写的是 `flags.template ?? step2.template`）。于是「选了 Rice UI，
+ * 却把一个正签出在 uniX-uview-ultra 的本地目录传进去」会静默产出 uview-ultra 的内容，
+ * 元信息里却老老实实记着 rice-ui —— 目录里是 uview 的组件，package.json 说是 rice-ui。
+ *
+ * 这里不改写用户的选择，也不擅自换成另一个分支，只把矛盾摆到台面上：字面目录拷贝取的是
+ * 工作区现状，要按分支内容生成就用 `--local-repo <仓库> --template <分支>`。
+ *
+ * 极简模式跳过：那条路径的 uiLibrary 恒为 'none'（映射到 main 分支），跟 base 模板本就不对应，
+ * 提醒只会是噪声。
+ */
+function describeUIMismatch(source: TemplateSource, options: CreateOptions): string | null {
+  if (source.kind !== 'literal-dir' || options.templateMode === 'minimal' || !options.uiLibrary) {
+    return null
+  }
+  if (source.headBranch === null || source.headBranch === getBranchByUILibrary(options.uiLibrary)) {
+    return null
+  }
+  const expected = getBranchByUILibrary(options.uiLibrary)
+  return `你选择的是 ${options.uiLibrary}（对应分支 ${expected}），但 --template 指向的本地目录`
+    + `当前签出在 ${source.headBranch}：字面目录拷贝取的是工作区现状，生成内容会与所选 UI 库不一致。`
+    + `如需按分支内容生成，请改用 --local-repo ${source.dir} --template ${expected}`
 }
 
 /**

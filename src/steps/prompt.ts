@@ -8,7 +8,7 @@
  *    - 步骤 1：模板模式单选（极简模式拉取 base，复杂模式继续后续步骤）；
  *    - 步骤 2：UI 组件库单选（rice-ui / uview-ultra / 无）；
  *    - 步骤 3：系统底座多选（i18n 国际化、theme 主题色）；
- *    - 步骤 4：扩展功能多选（echarts, signature, rxjs, device, lodash, crypto, webview）；
+ *    - 步骤 4：扩展功能多选（time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview）；
  *    - 步骤 5：预留位（配置包管理器与后续扩展）；
  * 3. 产物交付：输出标准 CreateOptions，并提供项目创建后的快捷启动指引 printNextSteps。
  */
@@ -51,8 +51,7 @@ function parseList(raw: string, allAllowed: string[]): string[] {
       && k !== 'theme'
       && k !== 'z-paging-x'
       && k !== 'zpaging'
-      && k !== 'dayuts'
-      && k !== 'time',
+      && k !== 'dayuts',
   )
   if (unknown.length > 0) {
     throw new Error(`未知取值: ${unknown.join(', ')}（可选: ${allAllowed.join(', ')}, none, all）`)
@@ -128,7 +127,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
  * 1. 第一步：单选模板模式（极简模式拉取 base，复杂模式继续后续步骤）
  * 2. 第二步：单选 UI 组件库（rice-ui / uview-ultra / 无）
  * 3. 第三步：多选系统底座（i18n 国际化、theme 主题色）
- * 4. 第四步：多选扩展功能（echarts, signature, rxjs, device, lodash, crypto, webview）
+ * 4. 第四步：多选扩展功能（time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview）
  * 5. 第五步：预留位（配置包管理器与后续扩展）
  */
 export async function promptCreateOptions(
@@ -188,7 +187,7 @@ export async function promptCreateOptions(
   if (!process.stdin.isTTY) {
     throw new Error(
       '当前不是交互式终端环境，必须显式指定要勾选的内容：\n'
-      + '  --features <list>  如 i18n,theme,lodash,echarts（none = 全不选，all = 全选）\n'
+      + '  --features <list>  如 i18n,theme,echarts（none = 全不选，all = 全选）\n'
       + '想要默认值，可以只加 --yes。',
     )
   }
@@ -244,7 +243,7 @@ export async function promptCreateOptions(
   // 3. 第三步: 多选：选择系统底座（i18n 国际化和 theme 主题色，默认全选）
   const step3 = await promptStep3SystemBase()
 
-  // 4. 第四步: 多选：选择扩展功能（echarts, signature, rxjs, device, lodash, crypto, webview, nestedScroll，默认都不选）
+  // 4. 第四步: 多选：选择扩展功能（time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview；仅 time 默认勾选）
   const step4 = await promptStep4Features()
 
   // 5. 第五步: 预留位（配置包管理器与后续扩展）

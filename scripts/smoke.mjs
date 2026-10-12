@@ -34,6 +34,15 @@ const REPO_ROOT = process.env.UNIBESTX_LOCAL_REPO
  * checkout 的那一支，本地停在别的分支时（比如 base）会拿错模板、误报缺失。
  */
 const BRANCH = process.env.UNIBESTX_SMOKE_BRANCH || 'uniX-rice-ui';
+
+/**
+ * 无裁剪阶段的极简模板分支
+ *
+ * 与 `src/commands/create.ts` 里的 `isMinimalTemplate = options.template === 'base'` 对齐：
+ * 这些分支跳过整个 prune，CASES 的裁剪断言对其不适用。
+ */
+const MINIMAL_TEMPLATES = ['base'];
+
 const CLI = path.join(CLI_DIR, 'bin', 'index.js');
 
 /** 每组用例：命令行参数 + 生成后的断言 */
@@ -44,20 +53,23 @@ const CASES = [
     args: ['--features', 'all', '--subs', 'all'],
     expectPresent: [
       'src/sub/auth/login.uvue',
-      'src/router/interceptor.uts',
+      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
+      'src/router/interceptor/interceptor.uts',
+      // all 覆盖全部可选 key（含 bignumber 这类默认不勾的）
+      'uni_modules/unix-Bignumber',
+      'src/sub/bignumberFunctionDemo/bignumberFunctionDemo.uvue',
     ],
     expectAbsent: [
       'src/pages/basic/components',
       'src/pages/function/components',
-      'src/pages/ai',
-      '.claude',
+      // 只断言作者本机的权限白名单被剥离；整个 `.claude/` 是交付内容（skills/ 里是模板
+      // README 宣传的 unibestX-skill），断言它「应当不存在」是错的（2026-10-12 已纠正）
+      '.claude/settings.json',
       'docs',
-      'Dockerfile',
       'uni_modules/uni-ui-x',
       'uni_modules/ali-iconfont',
       'uni_modules/uts-worker',
       'uni_modules/uts-button',
-      'scripts/router-guard-test',
       'dist',
       'unpackage',
       'packages/cli',
@@ -72,18 +84,18 @@ const CASES = [
       'src/pages/index/index.uvue',
       'src/pages/me/me.uvue',
       'src/sub/auth/login.uvue',
-      'src/router/interceptor.uts',
-      'src/store/vapor/app.ts',
+      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
+      'src/router/interceptor/interceptor.uts',
+      'src/store/vapor/app.uts',
       'uni_modules/z-paging-x',
     ],
     expectAbsent: [
-      'src/pages/ai',
       'src/i18n',
       'uni_modules/lime-i18n',
       'src/pages/basic/components',
       'src/pages/function/components',
       'uni_modules/e-chart',
-      '.claude',
+      '.claude/settings.json',
       'docs',
     ],
   },
@@ -95,64 +107,74 @@ const CASES = [
       'src/sub/auth/login.uvue',
     ],
     expectAbsent: [
-      'src/sub/device',
-      'src/pages/ai',
+      'src/sub/deviceFunctionDemo',
       'src/pages/basic/components',
       'src/pages/function/components',
     ],
   },
   {
-    name: 'auth-subs',
-    description: 'device/lodash 两个分包',
-    args: ['--features', 'none', '--subs', 'device,lodash'],
+    // lime 三件套是 2026-10 新增的选配项：勾选时演示页与插件必须在，
+    // 且不能把同样的 UniApp 分包误留（lime-use 插件本体只在勾选时才保留）
+    name: 'lime-tools',
+    description: '只留 lime 三件套：工具函数 / 组合式函数 / 颜色工具',
+    args: ['--features', 'limeShared,limeUse,limeColor', '--subs', 'none'],
     expectPresent: [
       'src/sub/auth/login.uvue',
-      'src/router/interceptor.uts',
-      'uni_modules/z-paging-x',
+      'src/sub/limeSharedFunctionDemo/limeSharedFunctionDemo.uvue',
+      'src/sub/limeUseFunctionDemo/limeUseFunctionDemo.uvue',
+      'src/sub/limeColorFunctionDemo/limeColorFunctionDemo.uvue',
+      'uni_modules/lime-use',
+      'uni_modules/lime-shared',
     ],
     expectAbsent: [
-      'src/sub/crypto',
-      'src/sub/time',
-      'src/sub/zpaging',
-      'src/sub/rxjsDemo',
-      'uni_modules/mp-html',
-      'src/pages/ai',
-      'src/pages/basic/components',
+      'uni_modules/e-chart',
+      'uni_modules/unix-crypto',
+      'src/sub/echartsFunctionDemo',
+      'src/sub/cryptoFunctionDemo',
+      'src/sub/deviceFunctionDemo',
       'src/pages/function/components',
     ],
   },
   {
     name: 'default-auth-only',
-    description: '默认创建：4 核心特性全选，不传分包参数（仅保留 auth 分包）',
+    description: '默认创建：核心特性全选，不传分包参数（仅保留 auth 分包）',
     args: ['--features', 'all'],
     expectPresent: [
       'src/sub/auth/login.uvue',
-      'src/router/interceptor.uts',
+      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
+      'src/router/interceptor/interceptor.uts',
       'uni_modules/z-paging-x',
+      // all = 全部可选 key，含默认勾选的 time
+      'uni_modules/lime-dayuts',
+      'src/sub/timeFunctionDemo/timeFunctionDemo.uvue',
     ],
     expectAbsent: [
       'src/sub/device',
-      'src/sub/lodash',
       'src/sub/crypto',
       'src/sub/zpaging',
-      'src/pages/ai',
       'src/pages/basic/components',
       'src/pages/function/components',
-      '.claude',
+      '.claude/settings.json',
       'docs',
-      'Dockerfile',
     ],
   },
   {
-    name: 'nested-only',
-    description: '只留 nested-scroll：组件保留，基础/功能视图纯净，z-paging-x 插件常驻',
-    args: ['--features', 'none', '--subs', 'nested-scroll'],
+    // signature / device / nestedScroll 已从第四步选配项中移除，改为「永远裁剪」：
+    // 这里用一个「什么都勾上」的极端配置，证明它们仍然会被删干净
+    name: 'always-pruned',
+    description: 'signature / device / nestedScroll 已移出选配项，--features all 也照样裁掉',
+    args: ['--features', 'all', '--subs', 'all'],
     expectPresent: [
       'src/sub/auth/login.uvue',
+      'src/sub/echartsFunctionDemo/echartsFunctionDemo.uvue',
       'uni_modules/z-paging-x',
     ],
     expectAbsent: [
-      'src/sub/zpaging',
+      'uni_modules/lime-signature',
+      'src/sub/signatureFunctionDemo',
+      'src/sub/deviceFunctionDemo',
+      'src/components/NestedScroll',
+      'src/sub/nestedScrollFunctionDemo',
       'src/pages/function/components',
     ],
   },
@@ -170,18 +192,62 @@ const CASES = [
     ],
   },
   {
-    name: 'utils-partial',
-    description: '只留 device 分包：功能视图纯净无 card 残留',
-    args: ['--features', 'none', '--subs', 'device'],
+    // 不勾任何扩展功能时，三件套插件本体也必须跟着走（lime-use 只被自己的
+    // 演示页引用，lime-shared / lime-color 是 lime-icon / lime-style 的依赖，必须留下）
+    name: 'unused-modules',
+    description: '不勾选扩展功能：插件与演示分包一并清理，共享依赖与内置 rxjs 保留',
+    args: ['--features', 'none', '--subs', 'none'],
     expectPresent: [
       'src/sub/auth/login.uvue',
+      'uni_modules/lime-shared',
+      'uni_modules/lime-color',
+      // rxjs-lite 被 src/http/stream/stream.uts 依赖，属内置恒留，任何勾选组合下都不裁剪
+      'src/utils/rxjs-lite/index.uts',
+      'src/sub/rxjsFunctionDemo/rxjsFunctionDemo.uvue',
+      // z-paging-x 同样不进选配项，插件本体不参与裁剪
+      'uni_modules/z-paging-x',
     ],
     expectAbsent: [
-      'src/sub/lodash',
-      'src/sub/crypto',
-      'src/sub/time',
-      'uni_modules/iRainna-lodash',
+      'uni_modules/e-chart',
       'uni_modules/unix-crypto',
+      'uni_modules/unix-Bignumber',
+      'src/sub/bignumberFunctionDemo',
+      'uni_modules/lime-signature',
+      'uni_modules/lime-use',
+      // time 是可勾选项且默认勾选，这里显式不选，插件本体与演示分包都必须走
+      'uni_modules/lime-dayuts',
+      'src/sub/timeFunctionDemo',
+      'src/sub/limeSharedFunctionDemo',
+      'src/sub/limeUseFunctionDemo',
+      'src/sub/limeColorFunctionDemo',
+      'src/sub/deviceFunctionDemo',
+      'src/components/NestedScroll',
+      'src/sub/nestedScrollFunctionDemo',
+      'src/pages/function/components',
+    ],
+  },
+  {
+    // time 是唯一默认勾选的扩展功能：显式只勾它，验证插件本体与演示分包都在
+    name: 'dayuts-only',
+    description: '只勾 time：lime-dayuts 插件与 timeFunctionDemo 保留，其余扩展仍裁掉',
+    args: ['--features', 'time', '--subs', 'none'],
+    expectPresent: [
+      'src/sub/auth/login.uvue',
+      'uni_modules/lime-dayuts',
+      'src/sub/timeFunctionDemo/timeFunctionDemo.uvue',
+    ],
+    expectAbsent: [
+      'uni_modules/e-chart',
+      'uni_modules/unix-crypto',
+      'uni_modules/unix-Bignumber',
+      'uni_modules/lime-use',
+      'src/sub/echartsFunctionDemo',
+      'src/sub/bignumberFunctionDemo',
+      'src/sub/cryptoFunctionDemo',
+      'src/sub/limeSharedFunctionDemo',
+      'src/sub/limeUseFunctionDemo',
+      'src/sub/limeColorFunctionDemo',
+      'src/sub/deviceFunctionDemo',
       'src/pages/function/components',
     ],
   },
@@ -193,23 +259,88 @@ const CASES = [
  * src/api 是项目的接口层，**整个目录都不参与裁剪**，与勾不勾 httpDemo 无关：
  *   - auth/    —— 被 src/http/refresh.uts 与 src/sub/auth/login.uvue 依赖（均永久保留）
  *   - privacy/ —— 被 src/sub/privacy/privacy.uvue 依赖（该分包不在裁剪清单里，永不删除）
- *   - example* —— 虽是 httpDemo 的示例接口，但 tests/unit/api/api.test.ts 也 import 它
+ *   - example  —— 虽是 httpDemo 的示例接口，但 tests/unit/api/api.test.ts 也 import 它
  * 以及 tests/unit/api/api.test.ts。
  *
  * 曾经 httpDemo 的 extraRemovePaths 写成整目录 'src/api'，于是不勾 httpDemo 时
  * 把 auth/privacy 一起删掉，生成物直接爆一堆悬空 import。这里对**每一个用例**
  * 无条件断言 src/api 完整存在，杜绝同类回归再次静默滑过。
+ *
+ * 注意：模板已删除 `src/api/example.d.uts.ts`（类型定义并入 example.uts），
+ * 断言里不能再要求它存在，否则每个用例都会假报「缺失」。
  */
 const API_ASSETS_ALWAYS_KEPT = [
   'src/api/auth/auth.uts',
   'src/api/privacy/privacy.uts',
   'src/api/example.uts',
-  'src/api/example.d.uts.ts',
   'tests/unit/api/api.test.ts',
 ];
 
 for (const testCase of CASES) {
   testCase.expectPresent.push(...API_ASSETS_ALWAYS_KEPT);
+}
+
+/**
+ * 模板的「AI 与 Skill 体系」交付物（回归防护）
+ *
+ * 模板 README「🤖 同时它也是一套『AI 原生』开发模板」一节明确宣传这两个东西随项目交付：
+ *   - `.claude/skills/unibestX-skill/SKILL.md` —— 「1 个入口 + 8 分册」的 uni-app X 规范库，
+ *     Claude Code / Codex 克隆即可用。复杂分支上是相对软链
+ *     （`.claude/skills/unibestX-skill` → `../../.agents/skills/unibestX-skill`），
+ *     base 上是实体目录；这里断言的是链接目标，顺带守住 sanitize 的软链保留逻辑
+ *     （`src/utils/fs.ts` 用 readlink + symlink 重建）；
+ *   - `scripts/router-guard-test/` —— README 项目结构里的「路由守卫决策矩阵测试」。
+ *
+ * 2026-10-12 曾把这两样连同整个 `.claude/` 一起列进 sanitize 的剥离清单，等于把模板
+ * 明确宣传的交付能力删了。现在 sanitize 只删作者本机的 `.claude/settings.json`，
+ * 这里对**每一个用例**无条件断言它们还在。
+ *
+ * 注：CASES 在极简模板（base）下整段跳过，而 base 不带 router-guard-test/，
+ * 所以这份清单只对会跑到 CASES 的复杂分支生效，不会在 base 上假红。
+ */
+const DELIVERABLES_ALWAYS_KEPT = [
+  '.claude/skills/unibestX-skill/SKILL.md',
+  'scripts/router-guard-test/run.ts',
+];
+
+for (const testCase of CASES) {
+  testCase.expectPresent.push(...DELIVERABLES_ALWAYS_KEPT);
+}
+
+/**
+ * 分支自带的 uni_modules：这些插件是**该分支模板的正式依赖**，不属于裁剪对象
+ *
+ * 上面 CASES 里的断言是按 `uniX-rice-ui` 写的，直接拿同一份清单去套别的分支会假报：
+ *   - `uni_modules/uts-worker` / `uts-button` —— uview-ultra 的 UI 组件直接引用它们，
+ *     删掉生成物就悬空。rice-ui 根本没有这两个模块，所以那两条断言在 rice-ui 上一直
+ *     是「因为文件不存在而通过」的空断言，看着绿其实什么都没验证；
+ *   - `uni_modules/lime-dayuts` —— uview-ultra 的 package.json 用
+ *     `uni_modules.dependencies` 声明了它，不勾 time 时 resolveModuleClosure 会保护
+ *     插件本体（只清演示分包），这是设计如此，不是漏删。
+ *
+ * 所以按分支把这几个模块从 expectAbsent 挪到 expectPresent —— 既让 uview-ultra 不再
+ * 假红，也顺带守住「别把别的分支的 UI 依赖当垃圾删了」这条底线。
+ * 用 `UNIBESTX_SMOKE_BRANCH` 切分支跑冒烟时，这份表就是唯一的差异点。
+ */
+const BRANCH_SHIPPED_MODULES = {
+  'uniX-uview-ultra': [
+    'uni_modules/uts-worker',
+    'uni_modules/uts-button',
+    'uni_modules/lime-dayuts',
+  ],
+};
+
+const shippedModules = new Set(BRANCH_SHIPPED_MODULES[BRANCH] ?? []);
+
+for (const testCase of CASES) {
+  for (const mod of shippedModules) {
+    const idx = testCase.expectAbsent.indexOf(mod);
+    if (idx >= 0) {
+      // 只反向断言「原本要求删掉」的那几条，不无差别地给所有用例加 expectPresent
+      testCase.expectAbsent.splice(idx, 1);
+      testCase.expectPresent.push(mod);
+    }
+  }
 }
 
 const FORBIDDEN_IN_MANIFEST = [
@@ -522,6 +653,94 @@ async function runLocalRepoChecks(tempRoot) {
   return caseName;
 }
 
+/**
+ * 判定用例是否勾选了某个功能特性
+ *
+ * `--features all` 视作全选，`none` 或压根没传视作不选，其余是逗号分隔清单。
+ */
+function featuresSelected(args, key) {
+  const idx = args.indexOf('--features');
+  if (idx < 0 || idx + 1 >= args.length) {
+    return false;
+  }
+  const value = args[idx + 1];
+  if (value === 'all') {
+    return true;
+  }
+  return value.split(',').map(item => item.trim()).includes(key);
+}
+
+/**
+ * 降级后必须一处不剩的能力 API
+ *
+ * key 是 `--features` 里的功能开关名；关闭该项时，这些符号不允许再出现在任何文件里
+ * （兜底 stub 所在的 src/store/index.uts / index.d.ts 除外）。
+ * 曾把 `--features` 的值强行传进来再逐符号扫全工程，比一条条写 fileAssertions 稳。
+ */
+const DOWNGRADE_API_SYMBOLS = {
+  theme: [
+    'applyNavbarTheme',
+    'getRootThemeStyle',
+    'applyThemeColor',
+    'getThemeTokens',
+    'useThemeStore',
+  ],
+  i18n: [
+    'useI18nStore',
+  ],
+};
+
+/** 所有降级检查共用的符号集 */
+const THEME_API_SYMBOLS = Object.values(DOWNGRADE_API_SYMBOLS).flat();
+
+/** 这些文件里出现主题 API 是设计如此：兜底 stub 与其类型声明 */
+const THEME_API_ALLOWED_FILES = [
+  path.join('src', 'store', 'index.uts'),
+  path.join('src', 'store', 'index.d.ts'),
+];
+
+/**
+ * 扫描 theme 关闭后的残留主题 API 引用
+ *
+ * 2026-10-12 的真实事故：清理 `applyNavbarTheme` 的 replace 没带 `g` 标志，而模板里有 3 处调用，
+ * 只有 onMounted 那处被清掉；onShow 里的调用留着，可它的 import 和 `src/theme/` 都已被删 ——
+ * H5 一跑就 `ReferenceError: applyNavbarTheme is not defined`。
+ *
+ * runSelfCheck 查的是「import 指向的文件还在不在」，对这种「import 没了、调用还在」的
+ * 反向悬空无能为力，所以这里逐用例补一道内容级防线。
+ */
+function findThemeLeftovers(projectDir, symbols = THEME_API_SYMBOLS) {
+  const pattern = new RegExp(`\\b(${symbols.join('|')})\\b`);
+  const hits = [];
+
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name === '.git') {
+        continue;
+      }
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      if (!/\.(uvue|uts|ts|js)$/.test(entry.name)) {
+        continue;
+      }
+      const rel = path.relative(projectDir, abs);
+      if (THEME_API_ALLOWED_FILES.includes(rel)) {
+        continue;
+      }
+      const matched = fs.readFileSync(abs, 'utf8').match(pattern);
+      if (matched) {
+        hits.push(`${rel}（${matched[0]}）`);
+      }
+    }
+  }
+
+  walk(projectDir);
+  return hits;
+}
+
 async function runCase(testCase, tempRoot) {
   console.log(`\n\x1B[1m▶ ${testCase.name}\x1B[0m — ${testCase.description}`);
   const projectName = `smoke-${testCase.name}`;
@@ -605,6 +824,33 @@ async function runCase(testCase, tempRoot) {
   for (const problem of checkRouteConfig(projectDir)) {
     record(testCase.name, false, problem);
   }
+  // 3a. theme 降级残留
+  if (featuresSelected(testCase.args, 'theme')) {
+    record(testCase.name, true, 'theme 已勾选，跳过降级残留检查');
+  }
+  else {
+    const leftovers = findThemeLeftovers(projectDir, DOWNGRADE_API_SYMBOLS.theme);
+    if (leftovers.length === 0) {
+      record(testCase.name, true, 'theme 关闭后无残留的主题 API 引用');
+    }
+    for (const hit of leftovers) {
+      record(testCase.name, false, `theme 关闭后仍残留主题 API：${hit}`);
+    }
+  }
+
+  // 3b. i18n 降级残留（与 theme 同源：import 清了、调用还在的悬空）
+  if (featuresSelected(testCase.args, 'i18n')) {
+    record(testCase.name, true, 'i18n 已勾选，跳过降级残留检查');
+  }
+  else {
+    const leftovers = findThemeLeftovers(projectDir, DOWNGRADE_API_SYMBOLS.i18n);
+    if (leftovers.length === 0) {
+      record(testCase.name, true, 'i18n 关闭后无残留的 i18n API 引用');
+    }
+    for (const hit of leftovers) {
+      record(testCase.name, false, `i18n 关闭后仍残留 i18n API：${hit}`);
+    }
+  }
   for (const problem of checkDependencies(projectDir)) {
     record(testCase.name, false, problem);
   }
@@ -641,8 +887,22 @@ async function main() {
   console.log(`临时目录: ${tempRoot}`);
   console.log(`模板来源: ${REPO_ROOT} #${BRANCH}（UNIBESTX_SMOKE_BRANCH 可覆盖分支）`);
 
+  // 极简模板（base 分支）在 create.ts 里是 `isMinimalTemplate = template === 'base'`，
+  // 直接跳过整个裁剪阶段（不裁功能、不删模块、不同步路由）。而 CASES 断言的恰恰是裁剪
+  // 行为，套在 base 上必然整片假红 —— 缺失的全是「base 本来就没有」的路径。
+  // 与其给出一份误导性的红，不如明说这一层不适用，只跑与模板无关的 CLI 边界契约。
+  if (MINIMAL_TEMPLATES.includes(BRANCH)) {
+    console.log(`\x1B[33m⚠\x1B[0m #${BRANCH} 是极简模板，无裁剪阶段：CASES 的裁剪断言不适用，已跳过`);
+    console.log('  要覆盖裁剪行为请用 UNIBESTX_SMOKE_BRANCH=uniX-rice-ui 或 uniX-uview-ultra');
+    // 指名道姓要跑某个裁剪用例却跑不了时直接失败，别给出「0/0 通过」这种假绿
+    if (!contractOnly && filter !== undefined) {
+      console.error(`用例「${filter}」断言的是裁剪行为，极简模板下无从验证`)
+      process.exit(1)
+    }
+  }
+
   try {
-    for (const testCase of selected) {
+    for (const testCase of (MINIMAL_TEMPLATES.includes(BRANCH) ? [] : selected)) {
       await runCase(testCase, tempRoot);
     }
     if (!filter || filter.includes('contract')) {

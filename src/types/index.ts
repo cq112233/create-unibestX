@@ -76,14 +76,14 @@ export type TemplateMode = 'complex' | 'minimal'
 export type SystemBaseKey = 'i18n' | 'theme'
 
 export type ExtraFeatureKey =
+  | 'time'
   | 'echarts'
-  | 'signature'
-  | 'rxjs'
-  | 'device'
-  | 'lodash'
+  | 'limeShared'
+  | 'limeUse'
+  | 'limeColor'
+  | 'bignumber'
   | 'crypto'
   | 'webview'
-  | 'nestedScroll'
 
 /**
  * 用户最终选定的生成配置
@@ -101,7 +101,7 @@ export type CreateOptions = {
   uiLibrary?: UILibrary
   /** 第三步：系统底座勾选项（i18n, theme） */
   systemBase?: string[]
-  /** 第四步：扩展功能勾选项（echarts, signature, rxjs, device, lodash, crypto, webview） */
+  /** 第四步：扩展功能勾选项（echarts, limeShared, limeUse, limeColor, crypto, webview） */
   extraFeatures?: string[]
   /** 功能 key 列表（已勾选的所有功能特性） */
   features: string[]

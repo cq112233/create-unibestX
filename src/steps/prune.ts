@@ -48,6 +48,37 @@ export type PruneResult = {
 }
 
 /**
+ * 从 import 语句里摘掉某个 store 符号（仅当全文已不再调用它）
+ *
+ * 模板所有分支的写法都是 `from '@/src/store/index.uts'`，而早先几条规则只认
+ * `'@/src/store'`，于是一条都没匹配上：i18n / theme 关掉后，App.uvue / App.ku.uvue /
+ * NavBar.uvue / TabbarMaskModal.uvue 会各留一条指向兜底 stub 的死 import。
+ * 这里统一处理，两种路径写法都认：
+ *   - 只 import 它一个 → 整行删掉；
+ *   - 与别的符号同列（App.uvue 是 `{ useI18nStore, useThemeStore }`）→ 只摘这一个名字。
+ *
+ * 带「仍在调用就不动」的保护：万一某个分支还真的用着它，宁可留 import 也不能删。
+ */
+function stripStoreImport(content: string, symbol: string): string {
+  if (new RegExp(`\\b${symbol}\\s*\\(`).test(content)) {
+    return content
+  }
+  return content
+    .replace(new RegExp(`^[ \\t]*import\\s*\\{\\s*${symbol}\\s*\\}\\s*from\\s*['"][^'"]*['"];?[ \\t]*\\r?\\n`, 'gm'), '')
+    .replace(
+      /^([ \t]*import\s*\{)([^}]*)\}(\s*from\s*['"][^'"]*['"];?[ \t]*\r?\n)/gm,
+      (whole: string, head: string, names: string, tail: string) => {
+        const list = names.split(',').map(name => name.trim()).filter(name => name.length > 0)
+        if (!list.includes(symbol)) {
+          return whole
+        }
+        const kept = list.filter(name => name !== symbol)
+        return kept.length === 0 ? '' : `${head} ${kept.join(', ')} }${tail}`
+      },
+    )
+}
+
+/**
  * 按勾选结果裁剪项目
  */
 export async function prune(
@@ -199,10 +230,6 @@ export function formatNavbarTitle(title: string): string {
     const appUvuePath = path.join(projectRoot, 'App.uvue')
     if (existsSync(appUvuePath)) {
       let appContent = await fs.readFile(appUvuePath, 'utf-8')
-      appContent = appContent
-        .replace(/import\s*\{\s*useI18nStore\s*,\s*useThemeStore\s*\}\s*from\s*['"]\.\/src\/store['"];?/, 'import { useThemeStore } from \'./src/store\';')
-        .replace(/import\s*\{\s*useThemeStore\s*,\s*useI18nStore\s*\}\s*from\s*['"]\.\/src\/store['"];?/, 'import { useThemeStore } from \'./src/store\';')
-        .replace(/import\s*\{\s*useI18nStore\s*\}\s*from\s*['"]\.\/src\/store['"];?\r?\n?/, '')
       appContent = appContent.replace(
         /\s*\/\/[^\n]*i18n Store[^\n]*\r?\n\s*const i18nStore = useI18nStore\(\);?\r?\n\s*i18nStore\.initLocale\(\);?/,
         '',
@@ -210,6 +237,7 @@ export function formatNavbarTitle(title: string): string {
       appContent = appContent
         .replace(/\s*const i18nStore = useI18nStore\(\);?\r?\n?/, '\n')
         .replace(/\s*i18nStore\.initLocale\(\);?\r?\n?/, '\n')
+      appContent = stripStoreImport(appContent, 'useI18nStore')
       await fs.writeFile(appUvuePath, appContent, 'utf-8')
       replacedFiles.push('App.uvue')
     }
@@ -218,7 +246,8 @@ export function formatNavbarTitle(title: string): string {
     if (existsSync(storeIndex)) {
       let storeContent = await fs.readFile(storeIndex, 'utf-8')
       storeContent = storeContent
-        .replace(/export \* from '\.\/vapor\/i18n\.ts';?\r?\n?/, '')
+        // 扩展名兼容 .ts / .uts：模板已改名 .uts，旧写法只为兼容历史分支
+        .replace(/export \* from '\.\/vapor\/i18n\.(ts|uts)';?\r?\n?/, '')
         .replace(/export \* from '\.\/vdom\/i18n\.uts';?\r?\n?/, '')
       if (!storeContent.includes('export function useI18nStore')) {
         storeContent += `
@@ -348,7 +377,6 @@ export const refresherBackground = ref<string>('#f5f6fa');
         .replace(/\s*:class="\{[^}]*isDark[^}]*\}"/g, '')
         .replace(/\s*:class="themeStore\.state\.isDark \? 'dark' : ''"/g, '')
         .replace(/\s*:style="themeStyle"/g, '')
-        .replace(/import\s*\{\s*useThemeStore\s*\}\s*from\s*['"]@\/src\/store['"];?\r?\n?/, '')
         .replace(/import\s*\{\s*applyNavbarTheme\s*,\s*getRootThemeStyle\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
         .replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
       appKuContent = appKuContent.replace(
@@ -367,10 +395,9 @@ export const refresherBackground = ref<string>('#f5f6fa');
         /\s*const themeStyle = computed\(\(\): UTSJSONObject => \{\r?\n\s*return getRootThemeStyle\([^)]*\);?\r?\n\}\);?\r?\n?/,
         '',
       )
-      appKuContent = appKuContent.replace(
-        /\s*applyNavbarTheme\([^)]*\);?\r?\n?/,
-        '\n',
-      )
+      // ⚠️ 顺序有讲究：**先整块**删掉「注释 + 监听 applyNavbarTheme 的 watch / onShow」，
+      // 再收尾清理零散的 applyNavbarTheme 调用。反过来先做全局扫除，watch / onShow 会剩下
+      // 一个引用 `themeStore` 的空壳，而 themeStore 随后也被删 —— 换成另一个悬空引用。
       appKuContent = appKuContent.replace(
         /\/\/\s*主题模式[^\n]*\r?\n\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
         '',
@@ -379,6 +406,19 @@ export const refresherBackground = ref<string>('#f5f6fa');
         /\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
         '',
       )
+      // 每个页面切换都会触发的 onShow 只做「同步原生导航栏主题」这一件事，整块带走
+      appKuContent = appKuContent.replace(
+        /\/\/[^\n]*页面切换[^\n]*\r?\n\s*onShow\(\(\)\s*=>\s*\{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/g,
+        '',
+      )
+      // 收尾：onMounted 里的那一处，以及任何模板改版后新加的调用，一律清掉
+      appKuContent = appKuContent.replace(/^[ \t]*applyNavbarTheme\([^)]*\);?[ \t]*\r?\n/gm, '')
+      // 兜底告警：真删干净了就不会响；响说明模板又加了新的调用形态，别让它静默漏出去
+      if (appKuContent.includes('applyNavbarTheme')) {
+        warn('App.ku.uvue 里仍残留 applyNavbarTheme 调用，theme 降级可能不完整')
+      }
+      // themeStore 此时已无任何使用者，import 一并摘掉
+      appKuContent = stripStoreImport(appKuContent, 'useThemeStore')
       await fs.writeFile(appKuPath, appKuContent, 'utf-8')
       replacedFiles.push('App.ku.uvue')
     }
@@ -388,9 +428,6 @@ export const refresherBackground = ref<string>('#f5f6fa');
     if (existsSync(appUvuePath)) {
       let appContent = await fs.readFile(appUvuePath, 'utf-8')
       appContent = appContent
-        .replace(/import\s*\{\s*useThemeStore\s*,\s*useI18nStore\s*\}\s*from\s*['"]\.\/src\/store['"];?/, 'import { useI18nStore } from \'./src/store\';')
-        .replace(/import\s*\{\s*useI18nStore\s*,\s*useThemeStore\s*\}\s*from\s*['"]\.\/src\/store['"];?/, 'import { useI18nStore } from \'./src/store\';')
-        .replace(/import\s*\{\s*useThemeStore\s*\}\s*from\s*['"]\.\/src\/store['"];?\r?\n?/, '')
         .replace(/import\s*\{\s*applyThemeColor\s*,\s*themeColor\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
         .replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
       appContent = appContent.replace(
@@ -406,6 +443,7 @@ export const refresherBackground = ref<string>('#f5f6fa');
         .replace(/\s*(?:app|theme)Store\.initThemeMode\(\);?\r?\n?/, '\n')
         .replace(/\s*themeColor\.value = [^;]+;?\r?\n?/, '\n')
         .replace(/\s*applyThemeColor\([^)]*\);?\r?\n?/, '\n')
+      appContent = stripStoreImport(appContent, 'useThemeStore')
       await fs.writeFile(appUvuePath, appContent, 'utf-8')
       replacedFiles.push('App.uvue')
     }
@@ -417,7 +455,6 @@ export const refresherBackground = ref<string>('#f5f6fa');
       navBarContent = navBarContent
         .replace(/import\s*\{\s*getThemeTokens\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
         .replace(/import\s*type\s*\{\s*ThemeTokens\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
-        .replace(/import\s*\{\s*useThemeStore\s*\}\s*from\s*['"]@\/src\/store['"];?\r?\n?/, '')
       navBarContent = navBarContent.replace(
         /\/\/\s*亮 \/ 暗主题 token[^\n]*\r?\n\s*const themeTokens = computed\(\(\): ThemeTokens => \{\r?\n\s*return getThemeTokens\(useThemeStore\(\)\.state\.isDark\);?\r?\n\}\);?/,
         `// 默认导航栏浅色样式
@@ -428,6 +465,7 @@ const defaultNavText = '#000000';`,
         .replace(/themeTokens\.value\.navBg/g, 'defaultNavBg')
         .replace(/themeTokens\.value\.navText/g, 'defaultNavText')
         .replace(/useThemeStore\(\)\.state\.isDark \? '#334155' : '#e2e8f0'/g, '\'#e2e8f0\'')
+      navBarContent = stripStoreImport(navBarContent, 'useThemeStore')
       await fs.writeFile(navBarPath, navBarContent, 'utf-8')
       replacedFiles.push('src/components/NavBar/NavBar.uvue')
     }
@@ -437,29 +475,18 @@ const defaultNavText = '#000000';`,
     if (existsSync(tabbarModalPath)) {
       let content = await fs.readFile(tabbarModalPath, 'utf-8')
       content = content
-        .replace(/import\s*\{\s*useThemeStore\s*\}\s*from\s*['"]@\/src\/store['"];?\r?\n?/, '')
         .replace(/const themeStore = useThemeStore\(\);?\r?\n\s*const isDark = computed\(\(\): boolean => themeStore\.state\.isDark\);?/, 'const isDark = computed((): boolean => false);')
+      content = stripStoreImport(content, 'useThemeStore')
       await fs.writeFile(tabbarModalPath, content, 'utf-8')
       replacedFiles.push('src/components/TabbarMaskModal/TabbarMaskModal.uvue')
     }
 
-    // 7. 适配 src/components/NestedScroll/NestedScroll.uvue
-    const nestedScrollPath = path.join(projectRoot, 'src/components/NestedScroll/NestedScroll.uvue')
-    if (existsSync(nestedScrollPath)) {
-      let content = await fs.readFile(nestedScrollPath, 'utf-8')
-      content = content
-        .replace(/import\s*\{\s*useThemeStore\s*\}\s*from\s*['"]@\/src\/store['"];?\r?\n?/, '')
-        .replace(/const themeStore = useThemeStore\(\);?\r?\n\s*const isDark = computed\(\(\): boolean => themeStore\.state\.isDark\);?/, 'const isDark = computed((): boolean => false);')
-      await fs.writeFile(nestedScrollPath, content, 'utf-8')
-      replacedFiles.push('src/components/NestedScroll/NestedScroll.uvue')
-    }
-
-    // 8. 适配 src/store/index.uts：移除 theme store 导出，加入安全兜底 stub
+    // 7. 适配 src/store/index.uts：移除 theme store 导出，加入安全兜底 stub
     const storeIndex = path.join(projectRoot, 'src/store/index.uts')
     if (existsSync(storeIndex)) {
       let storeContent = await fs.readFile(storeIndex, 'utf-8')
       storeContent = storeContent
-        .replace(/export \* from '\.\/vapor\/theme\.ts';?\r?\n?/, '')
+        .replace(/export \* from '\.\/vapor\/theme\.(ts|uts)';?\r?\n?/, '')
         .replace(/export \* from '\.\/vdom\/theme\.uts';?\r?\n?/, '')
       if (!storeContent.includes('export function useThemeStore')) {
         storeContent += `

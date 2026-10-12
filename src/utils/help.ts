@@ -34,7 +34,7 @@ export function printHelp(): void {
 
   ${blue('可选的功能特性 (Features):')}
   ${yellow('  系统底座: i18n, theme')}
-  ${yellow('  扩展功能: echarts, signature, rxjs, device, lodash, crypto, webview, nestedScroll')}
+  ${yellow('  扩展功能: time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview')}
 
   ${blue('示例:')}
   ${green('  # 交互式引导创建')}
@@ -43,7 +43,7 @@ export function printHelp(): void {
 
   ${green('  # 快捷参数创建：指定 UI 库与功能')}
   ${cyan('  pnpm create unibestx my-app -u rice-ui -f i18n,theme,echarts')}
-  ${cyan('  pnpm create unibestx my-app -u uview-ultra -f lodash,crypto')}
+  ${cyan('  pnpm create unibestx my-app -u uview-ultra -f crypto,webview')}
 
   ${green('  # 极简模式：直接拉取纯净 base 分支')}
   ${cyan('  pnpm create unibestx my-app --template base')}
