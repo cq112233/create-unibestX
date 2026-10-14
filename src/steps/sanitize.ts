@@ -6,10 +6,9 @@
  * 2. 剥离脚手架工程自身的文件与历史 Monorepo 痕迹，以及模板作者的本机态文件
  *    （`.claude/settings.json`，注意只删具体文件、不删 `.claude/` 整个目录）；
  * 3. 隐私与敏感配置脱敏：
- *    - 重置 manifest.json 中的 appid 为纯净占位符（__UNI__XXXXXXXX）；
+ *    - 把 manifest.json 与 manifest.config.ts 中的各端 appid 换成「同形态」假值；
  *    - 剥离 uniCloud 秘钥与 spaceId；
- *    - 清空鸿蒙 app-harmony 签名证书口令与本地绝对路径；
- *    - 重置微信小程序 AppID 为通用占位符。
+ *    - 清空鸿蒙 app-harmony 签名证书口令与本地绝对路径。
  */
 import { existsSync } from 'node:fs'
 import path from 'node:path'
@@ -82,19 +81,74 @@ export type SanitizeResult = {
   scrubbedCredentials: string[]
 }
 
-/** 递归清空对象中所有名为 appid 的字符串值 */
-function cleanAllAppIds(obj: any): void {
+/**
+ * 各端 appid 的「同形态」假值。
+ *
+ * 形态照着真实值来（DCloud 是 `__UNI__` + 7 位十六进制，微信是 `wx` + 16 位十六进制，
+ * 支付宝是 16 位数字），这样填进 manifest 后各端仍认得出这是「未配置」而非格式非法；
+ * 同时明显是假值，不会让人误以为是可用的真实标识。
+ *
+ * ⚠️ `manifest.json` 由 `manifest.config.ts` 经 vite-plugin-uni-manifest **生成**
+ * （见模板 manifest.config.ts 顶部注释：json 是产物、config.ts 才是唯一真源）。
+ * 只改 json 的话，下次 `pnpm dev` / `pnpm build` 会被 config.ts 里的真实 appid 覆盖回去。
+ * 所以两个文件必须一起换，且共用本表 —— 否则两文件对不上，生成出来的 json 又会漂回真实值。
+ */
+const FAKE_APPIDS = {
+  dcloud: '__UNI__XXXXXXX',
+  weixin: 'wx0000000000000000',
+  alipay: '2000000000000000',
+} as const
+
+/** 按形态判定某个 appid 属于哪个端，返回对应的假值 */
+function fakeAppIdFor(value: string): string {
+  if (/^__UNI__/i.test(value)) {
+    return FAKE_APPIDS.dcloud
+  }
+  if (/^wx/i.test(value)) {
+    return FAKE_APPIDS.weixin
+  }
+  if (/^\d+$/.test(value)) {
+    return FAKE_APPIDS.alipay
+  }
+  // 认不出来的形态：仍换成假值，绝不把原值带出去
+  return FAKE_APPIDS.dcloud
+}
+
+/** 递归把对象里所有名为 appid 的字符串值换成同形态假值 */
+function scrubAllAppIds(obj: any): void {
   if (!obj || typeof obj !== 'object') {
     return
   }
   for (const key of Object.keys(obj)) {
     if (key.toLowerCase() === 'appid' && typeof obj[key] === 'string') {
-      obj[key] = ''
+      obj[key] = fakeAppIdFor(obj[key])
     }
     else if (typeof obj[key] === 'object') {
-      cleanAllAppIds(obj[key])
+      scrubAllAppIds(obj[key])
     }
   }
+}
+
+/**
+ * 把 manifest.config.ts 源码里的 appid 字面量换成同形态假值。
+ *
+ * 走正则而非结构化改写：config.ts 是 TS 源码（含注释、缩进、单双引号混用），
+ * 正则只碰 `appid: '<值>'` 这一段，引号与缩进原样保留，不会动到别的字段。
+ */
+function scrubConfigAppIds(content: string): { next: string, changed: boolean } {
+  let changed = false
+  const next = content.replace(
+    /(['"]?appid['"]?\s*:\s*)(['"])([^'"]*)\2/gi,
+    (whole: string, head: string, quote: string, value: string) => {
+      const fake = fakeAppIdFor(value)
+      if (fake === value) {
+        return whole
+      }
+      changed = true
+      return `${head}${quote}${fake}${quote}`
+    },
+  )
+  return { next, changed }
 }
 
 /**
@@ -127,9 +181,20 @@ export async function sanitize(
     removedPaths.push('packages/cli', 'pnpm-workspace.yaml', 'pnpm-lock.yaml', ...SELF_DOCS)
   }
 
-  step('清理 manifest.json 中的凭据与清空各端 appid')
+  step('清理 manifest 中的凭据与替换各端 appid')
   const manifestPath = path.join(projectRoot, 'manifest.json')
+  const manifestConfigPath = path.join(projectRoot, 'manifest.config.ts')
   const scrubbedCredentials: string[] = []
+
+  // manifest.config.ts 是 manifest.json 的真源，先改它，保证两文件换成同一批假值
+  if (existsSync(manifestConfigPath)) {
+    const configContent = await fs.readFile(manifestConfigPath, 'utf-8')
+    const { next, changed } = scrubConfigAppIds(configContent)
+    if (changed) {
+      await fs.writeFile(manifestConfigPath, next, 'utf-8')
+      scrubbedCredentials.push('manifest.config.ts: 各端 appid 换成同形态假值')
+    }
+  }
 
   if (existsSync(manifestPath)) {
     const manifest = await readJson<Record<string, any>>(manifestPath)
@@ -151,9 +216,10 @@ export async function sanitize(
       scrubbedCredentials.push('manifest.json: app-harmony.distribute.bundleName')
     }
 
-    // 彻底清空所有平台（根节点 DCloud、微信 mp-weixin、支付宝 mp-alipay 等）的 appid
-    cleanAllAppIds(manifest)
-    scrubbedCredentials.push('manifest.json: 清空各端 appid')
+    // 把所有平台（根节点 DCloud、微信 mp-weixin、支付宝 mp-alipay 等）的 appid
+    // 换成与 manifest.config.ts 同形态、同取值的假值
+    scrubAllAppIds(manifest)
+    scrubbedCredentials.push('manifest.json: 各端 appid 换成同形态假值')
 
     await writeJson(manifestPath, manifest, '\t')
   }
