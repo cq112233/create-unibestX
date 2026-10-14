@@ -26,7 +26,13 @@ export const SYSTEM_BASE_ITEMS: Feature[] = [
     patches: [
       {
         file: 'main.uts',
-        start: 'import i18n from \'./src/i18n\';',
+        // 锚点必须写成**前缀**，不能写成整行：模板各分支的 import 写法有两套 ——
+        //   `import i18n from './src/i18n';`             （unipageX / vite-plugin）
+        //   `import i18n from './src/i18n/index.uts';`   （main / uniX-rice-ui / uniX-uview-ultra）
+        // 匹配规则是「trim 后 includes」，写成带分号的整行只能命中其中一套，
+        // 另一套会因 optional 被静默跳过；而 src/i18n 此时已被删掉，
+        // 残留的 import 会在自检里炸成 dangling-import 并整体回滚。
+        start: 'import i18n from \'./src/i18n',
         optional: true,
         label: 'main.uts 移除 i18n import',
       },
