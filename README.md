@@ -179,8 +179,8 @@ pnpm create unibestx my-app --no-local
 | `limeShared` | **lime-shared 工具函数**（浮点精度、序列生成、唯一标识、去重切片与深比较） | ⬜ | `src/sub/limeSharedFunctionDemo` |
 | `limeUse` | **lime-use 组合式函数**（useCountDown、useCodeTimer、useTimeout、useZIndex） | ⬜ | `uni_modules/lime-use`, `src/sub/limeUseFunctionDemo` |
 | `limeColor` | **lime-color 颜色工具**（颜色格式互转、明暗调整、配色生成与主题色阶） | ⬜ | `src/sub/limeColorFunctionDemo` |
-| `bignumber` | **BigNumber 大数据运算**（任意精度加减乘除、幂与开方、进制转换与九种舍入模式） | ⬜ | `uni_modules/unix-Bignumber`, `src/sub/bignumberFunctionDemo` |
-| `crypto` | **Crypto 加密解密**（MD5、AES、DES、SHA-256、HMAC、Base64） | ⬜ | `uni_modules/unix-crypto`, `src/sub/cryptoFunctionDemo` |
+| `bignumber` | **BigNumber 大数据运算**（任意精度加减乘除、幂与开方、进制转换与九种舍入模式） | ⬜ | `uni_modules/bignumber-bestX`, `src/sub/bignumberFunctionDemo` |
+| `crypto` | **Crypto 加密解密**（MD5、AES、DES、SHA-256、HMAC、Base64） | ⬜ | `uni_modules/crypto-bestX`, `src/sub/cryptoFunctionDemo` |
 | `webview` | **WebView 双向通讯**（网页内嵌、跨端 postMessage 与 evalJS 交互） | ⬜ | `src/sub/webviewFunctionDemo`, `static/webview`, `hybrid` |
 
 > `time` 取消勾选时会一并清理 `uni_modules/lime-dayuts` 与 `src/sub/timeFunctionDemo`。
@@ -190,7 +190,7 @@ pnpm create unibestx my-app --no-local
 
 以下模块作为 unibestX 的核心基座能力，**永久内置**，不参与裁剪：
 
-- **登录鉴权与路由守卫（auth / 路由拦截器）**：包含 `src/sub/auth` 登录页、路由拦截与全局 401 守卫；
+- **route-bestX 路由引擎与鉴权守卫**：包含 `uni_modules/route-bestX` 极简高性能跨端路由插件、`src/router` 业务路由与 `src/sub/auth` 登录页，提供类似 vue-router 的 `$router` / `$route` API、全局守卫与拦截体系；
 - **z-paging-x 原生分页插件**：`uni_modules/z-paging-x` 核心列表底座开箱即用，`<z-paging-x>` 标签全局可用；
 - **RxJS 响应式流（rxjs-lite）**：UTS 自研的响应式流实现，被 `src/http/stream/stream.uts` 依赖，其演示分包 `src/sub/rxjsFunctionDemo` 同样恒留。
 

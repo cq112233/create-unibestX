@@ -53,10 +53,10 @@ const CASES = [
     args: ['--features', 'all', '--subs', 'all'],
     expectPresent: [
       'src/sub/auth/login.uvue',
-      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
-      'src/router/interceptor/interceptor.uts',
+      // route-bestX 已抽成独立内置 uni_module
+      'uni_modules/route-bestX/interceptor/interceptor.uts',
       // all 覆盖全部可选 key（含 bignumber 这类默认不勾的）
-      'uni_modules/unix-Bignumber',
+      'uni_modules/bignumber-bestX',
       'src/sub/bignumberFunctionDemo/bignumberFunctionDemo.uvue',
     ],
     expectAbsent: [
@@ -84,8 +84,8 @@ const CASES = [
       'src/pages/index/index.uvue',
       'src/pages/me/me.uvue',
       'src/sub/auth/login.uvue',
-      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
-      'src/router/interceptor/interceptor.uts',
+      // route-bestX 已抽成独立内置 uni_module
+      'uni_modules/route-bestX/interceptor/interceptor.uts',
       'src/store/vapor/app.uts',
       'uni_modules/z-paging-x',
     ],
@@ -128,7 +128,7 @@ const CASES = [
     ],
     expectAbsent: [
       'uni_modules/e-chart',
-      'uni_modules/unix-crypto',
+      'uni_modules/crypto-bestX',
       'src/sub/echartsFunctionDemo',
       'src/sub/cryptoFunctionDemo',
       'src/sub/deviceFunctionDemo',
@@ -141,8 +141,8 @@ const CASES = [
     args: ['--features', 'all'],
     expectPresent: [
       'src/sub/auth/login.uvue',
-      // 模板已把 interceptor 收进同名目录：src/router/interceptor/interceptor.uts
-      'src/router/interceptor/interceptor.uts',
+      // route-bestX 已抽成独立内置 uni_module
+      'uni_modules/route-bestX/interceptor/interceptor.uts',
       'uni_modules/z-paging-x',
       // all = 全部可选 key，含默认勾选的 time
       'uni_modules/lime-dayuts',
@@ -209,8 +209,8 @@ const CASES = [
     ],
     expectAbsent: [
       'uni_modules/e-chart',
-      'uni_modules/unix-crypto',
-      'uni_modules/unix-Bignumber',
+      'uni_modules/crypto-bestX',
+      'uni_modules/bignumber-bestX',
       'src/sub/bignumberFunctionDemo',
       'uni_modules/lime-signature',
       'uni_modules/lime-use',
@@ -238,8 +238,8 @@ const CASES = [
     ],
     expectAbsent: [
       'uni_modules/e-chart',
-      'uni_modules/unix-crypto',
-      'uni_modules/unix-Bignumber',
+      'uni_modules/crypto-bestX',
+      'uni_modules/bignumber-bestX',
       'uni_modules/lime-use',
       'src/sub/echartsFunctionDemo',
       'src/sub/bignumberFunctionDemo',

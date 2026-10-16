@@ -369,58 +369,65 @@ export const refresherBackground = ref<string>('#f5f6fa');
       replacedFiles.push('src/layouts/navbar/utils/theme.uts')
     }
 
-    // 3. 重写 App.ku.uvue：彻底移除主题动态 class、style、store 及 watch 监听
-    const appKuPath = path.join(projectRoot, 'App.ku.uvue')
-    if (existsSync(appKuPath)) {
-      let appKuContent = await fs.readFile(appKuPath, 'utf-8')
-      appKuContent = appKuContent
-        .replace(/\s*:class="\{[^}]*isDark[^}]*\}"/g, '')
-        .replace(/\s*:class="themeStore\.state\.isDark \? 'dark' : ''"/g, '')
-        .replace(/\s*:style="themeStyle"/g, '')
-        .replace(/import\s*\{\s*applyNavbarTheme\s*,\s*getRootThemeStyle\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
-        .replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
-      appKuContent = appKuContent.replace(
-        /\/\/\s*激活主题状态管理 Store\r?\n\s*const themeStore = useThemeStore\(\);?\r?\n?/,
-        '',
-      )
-      appKuContent = appKuContent.replace(
-        /\s*const themeStore = useThemeStore\(\);?\r?\n?/,
-        '\n',
-      )
-      appKuContent = appKuContent.replace(
-        /\/\/\s*主题样式变量[^\n]*\r?\n\s*const themeStyle = computed\(\(\): UTSJSONObject => \{\r?\n\s*return getRootThemeStyle\([^)]*\);?\r?\n\}\);?\r?\n?/,
-        '',
-      )
-      appKuContent = appKuContent.replace(
-        /\s*const themeStyle = computed\(\(\): UTSJSONObject => \{\r?\n\s*return getRootThemeStyle\([^)]*\);?\r?\n\}\);?\r?\n?/,
-        '',
-      )
-      // ⚠️ 顺序有讲究：**先整块**删掉「注释 + 监听 applyNavbarTheme 的 watch / onShow」，
-      // 再收尾清理零散的 applyNavbarTheme 调用。反过来先做全局扫除，watch / onShow 会剩下
-      // 一个引用 `themeStore` 的空壳，而 themeStore 随后也被删 —— 换成另一个悬空引用。
-      appKuContent = appKuContent.replace(
-        /\/\/\s*主题模式[^\n]*\r?\n\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
-        '',
-      )
-      appKuContent = appKuContent.replace(
-        /\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
-        '',
-      )
-      // 每个页面切换都会触发的 onShow 只做「同步原生导航栏主题」这一件事，整块带走
-      appKuContent = appKuContent.replace(
-        /\/\/[^\n]*页面切换[^\n]*\r?\n\s*onShow\(\(\)\s*=>\s*\{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/g,
-        '',
-      )
-      // 收尾：onMounted 里的那一处，以及任何模板改版后新加的调用，一律清掉
-      appKuContent = appKuContent.replace(/^[ \t]*applyNavbarTheme\([^)]*\);?[ \t]*\r?\n/gm, '')
-      // 兜底告警：真删干净了就不会响；响说明模板又加了新的调用形态，别让它静默漏出去
-      if (appKuContent.includes('applyNavbarTheme')) {
-        warn('App.ku.uvue 里仍残留 applyNavbarTheme 调用，theme 降级可能不完整')
+    // 3. 重写 src/AppRoot.uvue / App.ku.uvue：彻底移除主题动态 class、style、store 及 watch 监听
+    const rootCandidates = [
+      'src/AppRoot.uvue',
+      'App.ku.uvue',
+    ]
+    for (const relRootPath of rootCandidates) {
+      const appKuPath = path.join(projectRoot, relRootPath)
+      if (existsSync(appKuPath)) {
+        let appKuContent = await fs.readFile(appKuPath, 'utf-8')
+        appKuContent = appKuContent
+          .replace(/\s*:class="\{[^}]*isDark[^}]*\}"/g, '')
+          .replace(/\s*:class="themeStore\.state\.isDark \? 'dark' : ''"/g, '')
+          .replace(/\s*:style="themeStyle"/g, '')
+          .replace(/import\s*\{\s*applyNavbarTheme\s*,\s*getRootThemeStyle\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
+          .replace(/import\s*\{[^}]*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/, '')
+          .replace(/^[ \t]*import\s*[^;]*from\s*['"]@\/src\/theme\/index\.uts['"];?[ \t]*\r?\n?/gm, '')
+        appKuContent = appKuContent.replace(
+          /\/\/\s*激活主题状态管理 Store\r?\n\s*const themeStore = useThemeStore\(\);?\r?\n?/,
+          '',
+        )
+        appKuContent = appKuContent.replace(
+          /\s*const themeStore = useThemeStore\(\);?\r?\n?/,
+          '\n',
+        )
+        appKuContent = appKuContent.replace(
+          /\/\/\s*主题样式变量[^\n]*\r?\n\s*const themeStyle = computed\(\(\): UTSJSONObject => \{\r?\n\s*return getRootThemeStyle\([^)]*\);?\r?\n\}\);?\r?\n?/,
+          '',
+        )
+        appKuContent = appKuContent.replace(
+          /\s*const themeStyle = computed\(\(\): UTSJSONObject => \{\r?\n\s*return getRootThemeStyle\([^)]*\);?\r?\n\}\);?\r?\n?/,
+          '',
+        )
+        // ⚠️ 顺序有讲究：**先整块**删掉「注释 + 监听 applyNavbarTheme 的 watch / onShow」，
+        // 再收尾清理零散的 applyNavbarTheme 调用。反过来先做全局扫除，watch / onShow 会剩下
+        // 一个引用 `themeStore` 的空壳，而 themeStore 随后也被删 —— 换成另一个悬空引用。
+        appKuContent = appKuContent.replace(
+          /\/\/\s*主题模式[^\n]*\r?\n\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
+          '',
+        )
+        appKuContent = appKuContent.replace(
+          /\s*watch\(\(\): boolean => [^,]+isDark, \([^)]*\) => \{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/,
+          '',
+        )
+        // 每个页面切换都会触发的 onShow 只做「同步原生导航栏主题」这一件事，整块带走
+        appKuContent = appKuContent.replace(
+          /\/\/[^\n]*页面切换[^\n]*\r?\n\s*onShow\(\(\)\s*=>\s*\{\r?\n\s*applyNavbarTheme\([^)]*\);?\r?\n\}\);?\r?\n?/g,
+          '',
+        )
+        // 收尾：onMounted 里的那一处，以及任何模板改版后新加的调用，一律清掉
+        appKuContent = appKuContent.replace(/^[ \t]*applyNavbarTheme\([^)]*\);?[ \t]*\r?\n/gm, '')
+        // 兜底告警：真删干净了就不会响；响说明模板又加了新的调用形态，别让它静默漏出去
+        if (appKuContent.includes('applyNavbarTheme')) {
+          warn(`${relRootPath} 里仍残留 applyNavbarTheme 调用，theme 降级可能不完整`)
+        }
+        // themeStore 此时已无任何使用者，import 一并摘掉
+        appKuContent = stripStoreImport(appKuContent, 'useThemeStore')
+        await fs.writeFile(appKuPath, appKuContent, 'utf-8')
+        replacedFiles.push(relRootPath)
       }
-      // themeStore 此时已无任何使用者，import 一并摘掉
-      appKuContent = stripStoreImport(appKuContent, 'useThemeStore')
-      await fs.writeFile(appKuPath, appKuContent, 'utf-8')
-      replacedFiles.push('App.ku.uvue')
     }
 
     // 4. 重写 App.uvue：移除主题 Store 实例化与颜色生效调用

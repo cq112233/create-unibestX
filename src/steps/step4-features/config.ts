@@ -70,10 +70,10 @@ export const EXTRA_FEATURE_ITEMS: Feature[] = [
   {
     key: 'bignumber',
     label: 'BigNumber 大数据运算',
-    hint: '任意精度十进制运算：加减乘除、浮点误差对照、除法精度、幂与开方、进制转换与九种舍入模式 (unix-Bignumber)',
+    hint: '任意精度十进制运算：加减乘除、浮点误差对照、除法精度、幂与开方、进制转换与九种舍入模式 (bignumber-bestX)',
     default: false,
     removePaths: [
-      'uni_modules/unix-Bignumber',
+      'uni_modules/bignumber-bestX',
       'src/sub/bignumberFunctionDemo',
       // 模板的单元测试直接 import 插件本体，不跟着删会悬空、生成后被自检回滚
       'tests/unit/modules/bignumber.test.ts',
@@ -82,10 +82,10 @@ export const EXTRA_FEATURE_ITEMS: Feature[] = [
   {
     key: 'crypto',
     label: 'Crypto 加密解密',
-    hint: 'Base64、MD5、SHA-256、HMAC、AES 与 DES 常用加解密套件 (unix-crypto)',
+    hint: 'Base64、MD5、SHA-256、HMAC、AES 与 DES 常用加解密套件 (crypto-bestX)',
     default: false,
     removePaths: [
-      'uni_modules/unix-crypto',
+      'uni_modules/crypto-bestX',
       'src/sub/cryptoFunctionDemo',
     ],
   },

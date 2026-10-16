@@ -11,6 +11,7 @@
  */
 export const ALWAYS_KEEP_MODULES: string[] = [
   'z-paging-x',
+  'route-bestX',
 ]
 
 export const UNUSED_MODULES: string[] = []
