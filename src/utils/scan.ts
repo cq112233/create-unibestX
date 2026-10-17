@@ -26,6 +26,7 @@ const BUILTIN_TAGS = new Set([
   'open-data', 'picker-view', 'picker-view-column', 'functional-page-navigator', 'live-player',
   'live-pusher', 'native-button', 'ad', 'ad-draw', 'grid-view', 'grid-view-item', 'waterflow',
   'sticky-section', 'sticky-header', 'nested-scroll-body', 'nested-scroll-header', 'custom-tab-bar',
+  'glass-effect-view',
   'template', 'slot', 'block', 'component', 'transition', 'transition-group', 'keep-alive',
   'teleport', 'suspense', 'router-view', 'router-link',
   'root-portal', 'page-container', 'form', 'label', 'navigator', 'editor', 'keyboard-accessory',
