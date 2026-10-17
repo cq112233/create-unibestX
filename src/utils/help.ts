@@ -22,6 +22,7 @@ export function printHelp(): void {
 
   ${blue('创建选项:')}
   ${green('  -u, --ui <library>         指定 UI 库：rice-ui (推荐)、uview-ultra 或 none (无)')}
+  ${green('  -c, --chart <engine>       指定图表方案：xtf-charts (推荐)、echarts、all 或 none (无)')}
   ${green('  -f, --features <list>      功能开关的入口（none = 全不选，all = 全选，或逗号分隔）')}
   ${green('  -t, --template <source>    模板来源（分支名如 uniX-rice-ui / uniX-uview-ultra / main / base，或本地路径）')}
   ${green('  --local-repo <path>        本地模板仓库路径。设了之后按 --template 的分支名从本地仓库取内容')}
@@ -34,7 +35,8 @@ export function printHelp(): void {
 
   ${blue('可选的功能特性 (Features):')}
   ${yellow('  系统底座: i18n, theme')}
-  ${yellow('  扩展功能: time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview')}
+  ${yellow('  图表方案: xtfCharts (或 xtf-charts), echarts')}
+  ${yellow('  扩展功能: time, limeShared, limeUse, limeColor, bignumber, crypto, webview')}
 
   ${blue('示例:')}
   ${green('  # 交互式引导创建')}

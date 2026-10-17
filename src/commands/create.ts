@@ -33,6 +33,9 @@ export type CliFlags = {
   /** -u / --ui: 指定 UI 组件库 (rice-ui / uview-ultra / none) */
   u?: string
   ui?: string
+  /** -c / --chart: 指定图表方案 (xtf-charts / echarts / all / none) */
+  c?: string
+  chart?: string
   /** --features: 指定开启的功能特性列表（逗号分隔，或 none / all） */
   features?: string
   /** -t / --template: 指定分支名或本地目录路径 */

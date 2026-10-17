@@ -71,13 +71,17 @@ export type Feature = {
   removeScripts?: string[]
 }
 
+/** 支持的图表方案选项 */
+export type ChartOption = 'xtf-charts' | 'echarts' | 'all' | 'none'
+
 export type TemplateMode = 'complex' | 'minimal'
 
 export type SystemBaseKey = 'i18n' | 'theme'
 
+export type ChartFeatureKey = 'xtfCharts' | 'echarts'
+
 export type ExtraFeatureKey =
   | 'time'
-  | 'echarts'
   | 'limeShared'
   | 'limeUse'
   | 'limeColor'
@@ -99,9 +103,13 @@ export type CreateOptions = {
   templateMode?: TemplateMode
   /** UI 库选择（rice-ui、uview-ultra 或 none） */
   uiLibrary?: UILibrary
+  /** 第四步：图表方案选择（xtf-charts、echarts、all 或 none） */
+  chart?: ChartOption
   /** 第三步：系统底座勾选项（i18n, theme） */
   systemBase?: string[]
-  /** 第四步：扩展功能勾选项（echarts, limeShared, limeUse, limeColor, crypto, webview） */
+  /** 第四步：图表功能勾选项（xtfCharts, echarts） */
+  chartFeatures?: string[]
+  /** 第五步：扩展功能勾选项（time, limeShared, limeUse, limeColor, bignumber, crypto, webview） */
   extraFeatures?: string[]
   /** 功能 key 列表（已勾选的所有功能特性） */
   features: string[]

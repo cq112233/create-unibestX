@@ -2,12 +2,14 @@
  * 项目创建步骤与核心生命周期操作统一导出模块
  */
 
-// ── 用户交互向导 5 大独立分步 ──
+// ── 用户交互向导 6 大独立分步 ──
 export * from './step1-mode'        // 第一步：单选模板模式（极简模式 vs 复杂模式）
 export * from './step2-ui'          // 第二步：单选 UI 组件库（rice-ui / uview-ultra / 无）
 export * from './step3-system-base' // 第三步：多选系统底座（i18n 国际化、theme 主题色）
-export * from './step4-features'    // 第四步：多选扩展功能（time / echarts / lime* 等）
-export * from './step5-reserved'    // 第五步：预留位（包管理器选择与扩展支持）
+export * from './step4-charts'      // 第四步：单选图表方案（xtf-charts / echarts / all / 无）
+export * from './step5-features'    // 第五步：多选业务扩展功能（time / lime* / bignumber 等）
+export * from './step4-features'    // 兼容导出（step4-features 别名）
+export * from './step5-reserved'    // 第六步：预留位（包管理器选择与扩展支持）
 
 // ── CLI 执行管线生命周期阶段 ──
 export * from './prompt'            // 交互向导总协调器（串联 0~5 步与快速模式解析）

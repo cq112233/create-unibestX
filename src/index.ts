@@ -21,6 +21,7 @@ async function main(): Promise<void> {
       'template',
       'package-manager',
       'ui',
+      'chart',
       'local-repo',
     ],
     // 注意：`local` 刻意不放进 boolean。
@@ -32,6 +33,7 @@ async function main(): Promise<void> {
       v: 'version',
       y: 'yes',
       u: 'ui',
+      c: 'chart',
       f: 'features',
       t: 'template',
       m: 'package-manager',

@@ -16,13 +16,14 @@ import path from 'node:path'
 import process from 'node:process'
 import * as p from '@clack/prompts'
 import { cyan, green, yellow } from 'kolorist'
-import { EXTRA_FEATURES, FEATURES, SYSTEM_BASE_FEATURES } from '../manifest'
+import { CHART_FEATURES, EXTRA_FEATURES, FEATURES, SYSTEM_BASE_FEATURES } from '../manifest'
 import { promptStep1Mode } from './step1-mode'
 import { promptStep2UI } from './step2-ui'
 import { promptStep3SystemBase } from './step3-system-base'
-import { promptStep4Features } from './step4-features'
+import { promptStep4Charts } from './step4-charts'
+import { promptStep5Features } from './step5-features'
 import { promptStep5Reserved } from './step5-reserved'
-import type { CreateOptions, PackageManager, TemplateMode, UILibrary } from '../types'
+import type { ChartOption, CreateOptions, PackageManager, TemplateMode, UILibrary } from '../types'
 import { deriveProjectName, validateProjectName } from '../utils/validate'
 import type { CliFlags } from '../commands/create'
 
@@ -43,9 +44,16 @@ function parseList(raw: string, allAllowed: string[]): string[] {
     return [...allAllowed]
   }
   const wanted = value.split(',').map(s => s.trim()).filter(Boolean)
+  // 别名归一化（容错 xtf-charts / charts 别名）
+  const normalized = wanted.map(k => {
+    if (k === 'xtf-charts' || k === 'xtf_charts' || k === 'charts') {
+      return 'xtfCharts'
+    }
+    return k
+  })
   // 过滤出合法选项，容错旧内置项与核心能力项
-  const validWanted = wanted.filter(k => allAllowed.includes(k))
-  const unknown = wanted.filter(
+  const validWanted = normalized.filter(k => allAllowed.includes(k))
+  const unknown = normalized.filter(
     k => !allAllowed.includes(k)
       && k !== 'auth'
       && k !== 'theme'
@@ -57,6 +65,29 @@ function parseList(raw: string, allAllowed: string[]): string[] {
     throw new Error(`未知取值: ${unknown.join(', ')}（可选: ${allAllowed.join(', ')}, none, all）`)
   }
   return validWanted
+}
+
+/**
+ * 解析 -c / --chart 参数
+ */
+function parseChartFlag(raw?: string): ChartOption | undefined {
+  if (!raw) {
+    return undefined
+  }
+  const val = raw.trim().toLowerCase()
+  if (val === 'xtf-charts' || val === 'xtfcharts' || val === 'xtf' || val === 'xtf_charts') {
+    return 'xtf-charts'
+  }
+  if (val === 'echarts' || val === 'echart') {
+    return 'echarts'
+  }
+  if (val === 'all' || val === 'both') {
+    return 'all'
+  }
+  if (NONE_VALUES.has(val)) {
+    return 'none'
+  }
+  throw new Error(`未知图表选项: ${raw}（可选: xtf-charts, echarts, all, none）`)
 }
 
 /**
@@ -77,7 +108,7 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
   const featureKeys = FEATURES.map(f => f.key)
 
   const rawName = flags._?.[0]
-  if (!rawName || !flags.features) {
+  if (!rawName || (!flags.features && !flags.chart && !flags.c)) {
     return null
   }
 
@@ -104,14 +135,35 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
     }
   }
 
+  const chartFlag = parseChartFlag(flags.chart || flags.c)
+  let features = flags.features ? parseList(flags.features, featureKeys) : FEATURES.filter(f => f.default).map(f => f.key)
+
+  if (chartFlag === 'xtf-charts') {
+    features = [...features.filter(k => k !== 'echarts'), 'xtfCharts']
+  }
+  else if (chartFlag === 'echarts') {
+    features = [...features.filter(k => k !== 'xtfCharts'), 'echarts']
+  }
+  else if (chartFlag === 'all') {
+    features = [...new Set([...features, 'xtfCharts', 'echarts'])]
+  }
+  else if (chartFlag === 'none') {
+    features = features.filter(k => k !== 'xtfCharts' && k !== 'echarts')
+  }
+
   const pkgManager = (flags.packageManager || flags.m || 'pnpm') as PackageManager
   const install = flags.install !== false && flags.install !== 'false'
 
   return {
     projectName: deriveProjectName(rawName),
     targetDir: rawName,
+    templateMode: 'complex',
     uiLibrary,
-    features: parseList(flags.features, featureKeys),
+    chart: chartFlag,
+    systemBase: features.filter(k => SYSTEM_BASE_FEATURES.some(f => f.key === k)),
+    chartFeatures: features.filter(k => CHART_FEATURES.some(f => f.key === k)),
+    extraFeatures: features.filter(k => EXTRA_FEATURES.some(f => f.key === k)),
+    features,
     cleanUnusedModules: !flags['keep-unused-modules'],
     template,
     packageManager: pkgManager,
@@ -127,8 +179,9 @@ export function optionsFromFlags(flags: CliFlags): CreateOptions | null {
  * 1. 第一步：单选模板模式（极简模式拉取 base，复杂模式继续后续步骤）
  * 2. 第二步：单选 UI 组件库（rice-ui / uview-ultra / 无）
  * 3. 第三步：多选系统底座（i18n 国际化、theme 主题色）
- * 4. 第四步：多选扩展功能（time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview）
- * 5. 第五步：预留位（配置包管理器与后续扩展）
+ * 4. 第四步：单选图表方案（xtf-charts / echarts / all / 无）
+ * 5. 第五步：多选扩展功能（time, limeShared, limeUse, limeColor, bignumber, crypto, webview）
+ * 6. 第六步：预留位（配置包管理器与后续扩展）
  */
 export async function promptCreateOptions(
   cwd: string,
@@ -167,14 +220,30 @@ export async function promptCreateOptions(
     }
 
     const defaultFeatures = FEATURES.filter(f => f.default).map(f => f.key)
-    const selectedFeatures = flags.features ? parseList(flags.features, featureKeys) : defaultFeatures
+    let selectedFeatures = flags.features ? parseList(flags.features, featureKeys) : defaultFeatures
+
+    const chartFlag = parseChartFlag(flags.chart || flags.c)
+    if (chartFlag === 'xtf-charts') {
+      selectedFeatures = [...selectedFeatures.filter(k => k !== 'echarts'), 'xtfCharts']
+    }
+    else if (chartFlag === 'echarts') {
+      selectedFeatures = [...selectedFeatures.filter(k => k !== 'xtfCharts'), 'echarts']
+    }
+    else if (chartFlag === 'all') {
+      selectedFeatures = [...new Set([...selectedFeatures, 'xtfCharts', 'echarts'])]
+    }
+    else if (chartFlag === 'none') {
+      selectedFeatures = selectedFeatures.filter(k => k !== 'xtfCharts' && k !== 'echarts')
+    }
 
     return {
       projectName: deriveProjectName(rawName),
       targetDir: rawName,
       templateMode: 'complex',
       uiLibrary,
+      chart: chartFlag,
       systemBase: selectedFeatures.filter(k => SYSTEM_BASE_FEATURES.some(f => f.key === k)),
+      chartFeatures: selectedFeatures.filter(k => CHART_FEATURES.some(f => f.key === k)),
       extraFeatures: selectedFeatures.filter(k => EXTRA_FEATURES.some(f => f.key === k)),
       features: selectedFeatures,
       cleanUnusedModules: !flags['keep-unused-modules'],
@@ -211,10 +280,10 @@ export async function promptCreateOptions(
     projectName = String(inputProjectName).trim()
   }
 
-  // 1. 第一步：单选：模板模式选择（极简模式直接拉取 base 分支，复杂模式走第二步，默认复杂模式）
+  // 1. 第一步：单选：模板模式选择（极简模式直接拉取 base 分支，复杂模式走后续步骤，默认复杂模式）
   const step1 = await promptStep1Mode()
 
-  // ── 极简模式：直接拉取 base 分支，跳过第 2~5 步 ──
+  // ── 极简模式：直接拉取 base 分支，跳过第 2~6 步 ──
   if (step1.mode === 'minimal') {
     const template = flags.template ?? 'base'
     const packageManager: PackageManager = (flags.packageManager || flags.m || 'pnpm') as PackageManager
@@ -226,6 +295,7 @@ export async function promptCreateOptions(
       templateMode: 'minimal',
       uiLibrary: 'none',
       systemBase: [],
+      chartFeatures: [],
       extraFeatures: [],
       features: [],
       cleanUnusedModules: !flags['keep-unused-modules'],
@@ -235,7 +305,7 @@ export async function promptCreateOptions(
     }
   }
 
-  // ── 复杂模式：进入第 2、3、4、5 步 ──
+  // ── 复杂模式：进入第 2、3、4、5、6 步 ──
 
   // 2. 第二步: 单选：选择 UI 组件库（rice-ui 拉取 uniX-rice-ui，uview-ultra 拉取 uniX-uview-ultra，无拉取 main 分支，默认 rice-ui）
   const step2 = await promptStep2UI()
@@ -243,23 +313,27 @@ export async function promptCreateOptions(
   // 3. 第三步: 多选：选择系统底座（i18n 国际化和 theme 主题色，默认全选）
   const step3 = await promptStep3SystemBase()
 
-  // 4. 第四步: 多选：选择扩展功能（time, echarts, limeShared, limeUse, limeColor, bignumber, crypto, webview；仅 time 默认勾选）
-  const step4 = await promptStep4Features()
+  // 4. 第四步: 单选：选择图表方案（xtf-charts 原生跨端图表 / echarts 跨端图表 / all / none，默认 xtf-charts）
+  const step4 = await promptStep4Charts()
 
-  // 5. 第五步: 预留位（配置包管理器与后续扩展）
-  const step5 = await promptStep5Reserved(
+  // 5. 第五步: 多选：选择业务扩展功能（time, limeShared, limeUse, limeColor, bignumber, crypto, webview；仅 time 默认勾选）
+  const step5 = await promptStep5Features()
+
+  // 6. 第六步: 预留位（配置包管理器与后续扩展）
+  const step6 = await promptStep5Reserved(
     (flags.packageManager || flags.m || 'pnpm') as PackageManager,
     flags.install !== false && flags.install !== 'false',
   )
 
   const template = flags.template ?? step2.template
   const cleanUnusedModules = !flags['keep-unused-modules']
-  const packageManager = step5.packageManager
-  const install = step5.install
+  const packageManager = step6.packageManager
+  const install = step6.install
 
   const combinedFeatures = [
     ...step3.systemBase,
-    ...step4.extraFeatures,
+    ...step4.chartFeatures,
+    ...step5.extraFeatures,
   ]
 
   return {
@@ -267,8 +341,10 @@ export async function promptCreateOptions(
     targetDir: projectName,
     templateMode: 'complex',
     uiLibrary: step2.uiLibrary,
+    chart: step4.chart,
     systemBase: step3.systemBase,
-    extraFeatures: step4.extraFeatures,
+    chartFeatures: step4.chartFeatures,
+    extraFeatures: step5.extraFeatures,
     features: combinedFeatures,
     cleanUnusedModules,
     template,

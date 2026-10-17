@@ -17,7 +17,8 @@
 - 🪶 **极简模式 (Minimal)** - 另有 `base` 分支纯净骨架，零冗余代码，跳过 UI 库与功能裁剪，适合从零定制搭建
 - 🧩 **按需功能裁剪与解耦**：
   - **系统底座（默认全选）**：可自主选配 **i18n 国际化**（未勾选时自动降级纯中文直出）、**theme 主题色**（未勾选时自动降级静态默认单色）；
-  - **扩展功能（按需勾选）**：lime-dayuts 时间日期处理（**默认勾选**）、ECharts 图表、lime-shared 工具函数、lime-use 组合式函数、lime-color 颜色工具、BigNumber 大数据运算、Crypto 加解密、WebView 双向通讯等 8 项高频能力；
+  - **图表方案（独立选型）**：**XTF-Charts 原生图表**（基于 Canvas 2D 零依赖，体积缩减 90%+，推荐）、**ECharts 跨端图表**（基于 e-chart 组件）、两者兼备或纯净无图表；
+  - **扩展功能（按需勾选）**：lime-dayuts 时间日期处理（**默认勾选**）、lime-shared 工具函数、lime-use 组合式函数、lime-color 颜色工具、BigNumber 大数据运算、Crypto 加解密、WebView 双向通讯等高频能力；
   - **核心底座（恒定内置）**：登录鉴权与路由守卫（auth / 路由拦截器）、`z-paging-x` 原生分页插件本体永久内置，开箱即用。
 - 🧹 **演示视图智能联动** - 未勾选的功能特性不仅彻底清理源码与插件，还将自动同步剔除 `FunctionView` 业务演示列表中的入口按钮，代码零悬空
 - 🛡️ **四查自检保障** - 生成后自动执行完整性诊断（悬空 Import、悬空组件标签、路由一致性、依赖一致性），任一错误即自动回滚，保障生成物 100% 健壮
@@ -61,16 +62,17 @@ bestx my-app
 pnpm create unibestx
 ```
 
-命令行将依次引导您完成 5 步交互：
+命令行将依次引导您完成 6 步交互：
 
 1. **项目名称**：输入并校验合法英文标识；
 2. **第一步（模板模式）**：复杂模式（推荐，进入后续定制） / 极简模式（直接拉取 base 分支纯净骨架）；
 3. **第二步（UI 组件库）**：Rice UI（默认推荐） / uview-ultra / 无 UI 库；
 4. **第三步（系统底座）**：多选 i18n 国际化、theme 主题色（默认全选）；
-5. **第四步（扩展功能）**：多选 lime-dayuts 时间日期处理（**默认勾选**）、ECharts、lime-shared、lime-use、lime-color、BigNumber、Crypto、WebView（除 lime-dayuts 外默认全不选，按需勾选）；
-6. **第五步（预留与包管理器）**：配置包管理器（pnpm / npm / yarn）及是否立即安装依赖。
+5. **第四步（图表方案）**：单选 XTF-Charts 原生图表（推荐）、ECharts 跨端图表、两者兼备或无；
+6. **第五步（扩展功能）**：多选 lime-dayuts 时间日期处理（**默认勾选**）、lime-shared、lime-use、lime-color、BigNumber、Crypto、WebView（除 lime-dayuts 外默认全不选，按需勾选）；
+7. **第六步（预留与包管理器）**：配置包管理器（pnpm / npm / yarn）及是否立即安装依赖。
 
-> 选择极简模式时，将直接跳过第 2~5 步，落到 `base` 分支零冗余骨架。
+> 选择极简模式时，将直接跳过第 2~6 步，落到 `base` 分支零冗余骨架。
 
 ---
 
@@ -143,7 +145,8 @@ pnpm create unibestx my-app --no-local
 | 参数 | 缩写 | 说明 | 可选值 / 示例 |
 | --- | --- | --- | --- |
 | `--ui` | `-u` | 指定 UI 库与模板基线 | `rice-ui`（默认，推荐），`uview-ultra`，`none`（无 UI 库） |
-| `--features` | `-f` | 显式指定要启用的功能特性列表（**功能开关的入口**） | `i18n,theme,echarts` / `none`（全不选）/ `all`（全选） |
+| `--chart` | `-c` | 指定图表方案 | `xtf-charts`（推荐），`echarts`，`all`，`none`（无） |
+| `--features` | `-f` | 显式指定要启用的功能特性列表（**功能开关的入口**） | `i18n,theme,xtfCharts,time` / `none`（全不选）/ `all`（全选） |
 | `--template` | `-t` | 模板来源（分支名或本地路径） | `uniX-rice-ui`（Rice UI，默认）、`uniX-uview-ultra`、`main`（无 UI 库）、`base`（极简模板）、本地路径 |
 | `--local-repo` | - | 本地模板仓库路径。设了之后按 `--template` 的分支名从本地仓库取内容；不带值读 `UNIBESTX_LOCAL_REPO` | `/Users/chenqi/Desktop/unibestX` |
 | `--no-local` | - | 单次关闭本地模板模式，临时改回远程拉取 | - |
@@ -168,14 +171,22 @@ pnpm create unibestx my-app --no-local
 | `i18n` | **i18n 国际化**（多语言国际化支持） | ✅ 默认开启 | 未勾选时清理 `lime-i18n` 插件与多语言包，TabBar、NavBar 自动桥接降级为纯中文直出，Store 安全兜底 |
 | `theme` | **theme 主题色**（主题换肤与暗黑模式支持） | ✅ 默认开启 | 未勾选时清理 `src/theme`、`theme.json` 及主题演示，TabBar、NavBar、AppKu 自动降级为静态默认单色 |
 
-### 2. 扩展功能（Extra Features）
+### 2. 图表方案（Chart Engines）
+
+可单独通过 `-c / --chart` 单选，或通过 `--features` 指定：
+
+| 特性 Key | 名称与说明 | 默认状态 | 包含插件 / 目录 |
+| --- | --- | --- | --- |
+| `xtfCharts` | **XTF-Charts 原生图表**（基于 Canvas 2D 零依赖，体积缩减 90%+，全端原生流畅） | ⬜（交互向导中推荐） | `uni_modules/xtf-charts`, `src/sub/chartsFunctionDemo` |
+| `echarts` | **ECharts 跨端图表**（成熟完备，基于 e-chart 组件跨端渲染） | ⬜ | `uni_modules/e-chart`, `src/sub/echartsFunctionDemo` |
+
+### 3. 扩展功能（Extra Features）
 
 对齐功能页 `FunctionView` 的业务演示能力，除 `time` 外**默认全不选**，用户按需勾选或通过 `--features` 指定：
 
 | 特性 Key | 名称与说明 | 默认状态 | 包含插件 / 目录 |
 | --- | --- | --- | --- |
 | `time` | **lime-dayuts 时间日期处理**（日期解析与格式化、增减计算、相对时间与时间戳转换） | ✅ 默认开启 | `uni_modules/lime-dayuts`, `src/sub/timeFunctionDemo` |
-| `echarts` | **ECharts 跨端图表**（折线图、柱状图、饼图跨端渲染） | ⬜ | `uni_modules/e-chart`, `src/sub/echartsFunctionDemo` |
 | `limeShared` | **lime-shared 工具函数**（浮点精度、序列生成、唯一标识、去重切片与深比较） | ⬜ | `src/sub/limeSharedFunctionDemo` |
 | `limeUse` | **lime-use 组合式函数**（useCountDown、useCodeTimer、useTimeout、useZIndex） | ⬜ | `uni_modules/lime-use`, `src/sub/limeUseFunctionDemo` |
 | `limeColor` | **lime-color 颜色工具**（颜色格式互转、明暗调整、配色生成与主题色阶） | ⬜ | `src/sub/limeColorFunctionDemo` |

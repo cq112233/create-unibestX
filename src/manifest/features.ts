@@ -1,6 +1,7 @@
 import type { Feature, Replacement } from '../types'
 import { SYSTEM_BASE_ITEMS } from '../steps/step3-system-base/config'
-import { EXTRA_FEATURE_ITEMS } from '../steps/step4-features/config'
+import { CHART_ITEMS } from '../steps/step4-charts/config'
+import { EXTRA_FEATURE_ITEMS } from '../steps/step5-features/config'
 
 /**
  * 系统底座功能清单（引用自 step3 配置）
@@ -8,15 +9,21 @@ import { EXTRA_FEATURE_ITEMS } from '../steps/step4-features/config'
 export const SYSTEM_BASE_FEATURES: Feature[] = SYSTEM_BASE_ITEMS
 
 /**
- * 扩展功能清单（引用自 step4 配置）
+ * 图表方案功能清单（引用自 step4 配置）
+ */
+export const CHART_FEATURES: Feature[] = CHART_ITEMS
+
+/**
+ * 扩展功能清单（引用自 step5 配置）
  */
 export const EXTRA_FEATURES: Feature[] = EXTRA_FEATURE_ITEMS
 
 /**
- * 所有可选功能清单（包含系统底座与扩展功能）
+ * 所有可选功能清单（包含系统底座、图表方案与扩展功能）
  */
 export const FEATURES: Feature[] = [
   ...SYSTEM_BASE_FEATURES,
+  ...CHART_FEATURES,
   ...EXTRA_FEATURES,
 ]
 

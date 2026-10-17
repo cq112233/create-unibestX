@@ -537,6 +537,27 @@ async function runContractChecks(tempRoot) {
     record(caseName, false, `--keep-unused-modules 用例生成失败（退出码 ${keep.code}）`);
   }
 
+  // 6) -c / --chart 参数生效
+  const chartApp = path.join(tempRoot, 'chart-test-app');
+  const chartRun = await run([
+    'create', chartApp,
+    '--no-local',
+    '--template', REPO_ROOT,
+    '-c', 'xtf-charts',
+    '--features', 'none',
+    '--subs', 'none',
+    '--no-install',
+    '--yes',
+  ]);
+  if (chartRun.code === 0) {
+    const hasXtf = fs.existsSync(path.join(chartApp, 'uni_modules', 'xtf-charts'));
+    const hasEchart = fs.existsSync(path.join(chartApp, 'uni_modules', 'e-chart'));
+    record(caseName, hasXtf && !hasEchart, `-c xtf-charts 保留 xtf-charts 并裁掉 e-chart（xtf: ${hasXtf}, e-chart: ${hasEchart}）`);
+  }
+  else {
+    record(caseName, false, `-c xtf-charts 用例生成失败（退出码 ${chartRun.code}）`);
+  }
+
   return caseName;
 }
 
