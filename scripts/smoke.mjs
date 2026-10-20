@@ -402,7 +402,13 @@ function checkRouteConfig(projectDir) {
     }
     const data = JSON.parse(fs.readFileSync(abs, 'utf8'));
 
+    const seenPages = new Map();
     for (const page of data.pages ?? []) {
+      const count = (seenPages.get(page.path) ?? 0) + 1;
+      seenPages.set(page.path, count);
+      if (count === 2) {
+        problems.push(`${file}: 重复页面路由 ${page.path}`);
+      }
       if (!fs.existsSync(path.join(projectDir, `${page.path}.uvue`))) {
         problems.push(`${file}: 残留页面路由 ${page.path}`);
       }
@@ -416,7 +422,13 @@ function checkRouteConfig(projectDir) {
       if ((sub.pages ?? []).length === 0) {
         problems.push(`${file}: 空分包 ${sub.root}`);
       }
+      const seenSubPages = new Map();
       for (const page of sub.pages ?? []) {
+        const count = (seenSubPages.get(page.path) ?? 0) + 1;
+        seenSubPages.set(page.path, count);
+        if (count === 2) {
+          problems.push(`${file}: 分包 ${sub.root} 重复页面路由 ${page.path}`);
+        }
         if (!fs.existsSync(path.join(projectDir, `${sub.root}/${page.path}.uvue`))) {
           problems.push(`${file}: 残留分包路由 ${sub.root}/${page.path}`);
         }

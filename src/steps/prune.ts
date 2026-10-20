@@ -10,7 +10,7 @@
  * 4. 特性优雅降级：
  *    - i18n 未勾选时，将 TabBar、NavBar 和全局 Store 桥接重写为纯中文直出；
  * 5. 代码补丁与引用修改：应用 applyPatches 与 applyReplacements，剔除 main.uts 等入口文件的挂载代码；
- * 6. 路由表同步：扫描 pages.config.json 和 pages.json，自动剔除已删除页面路由和无效 easycom 组件规则；
+ * 6. 路由表同步：清理 pages.config.json 中已删除页面路由和无效 easycom 组件规则，并据此重建 pages.json；
  * 7. 演示页面同步：自动清理 BasicView.uvue 和 FunctionView.uvue 中的废弃 Demo 入口按钮；
  * 8. 空目录清理：递归收敛已删空的文件夹，保持项目目录整洁。
  */
@@ -767,8 +767,18 @@ export async function syncRouteConfigs(
 ): Promise<PruneResult['routeCleanup']> {
   const cleanup: PruneResult['routeCleanup'] = { pages: [], subPackages: [], easycom: [] }
 
-  for (const file of ['pages.config.json', 'pages.json']) {
-    const abs = path.join(projectRoot, file)
+  const configPath = path.join(projectRoot, 'pages.config.json')
+  const pagesJsonPath = path.join(projectRoot, 'pages.json')
+
+  // pages.json 是 vite-plugin-uni-pages 的生成物，包含按平台拆分的 #ifdef 注释。
+  // 不能用去注释后的 JSON 回写它，否则同一路径的各平台变体会变成真实重复路由。
+  // 这里只清理源配置 pages.config.json，再由它重建一份合法的初始 pages.json。
+  const files = existsSync(configPath)
+    ? [configPath]
+    : [pagesJsonPath]
+
+  for (const abs of files) {
+    const file = path.basename(abs)
     if (!existsSync(abs)) {
       continue
     }
@@ -842,11 +852,9 @@ export async function syncRouteConfigs(
     await writeJson(abs, data, '\t')
   }
 
-  // 保证生成物中始终存在 pages.json，防止 HBuilderX / Vite 首次启动冷读取 easycom 时报 ENOENT
-  const pagesConfigPath = path.join(projectRoot, 'pages.config.json')
-  const pagesJsonPath = path.join(projectRoot, 'pages.json')
-  if (existsSync(pagesConfigPath) && !existsSync(pagesJsonPath)) {
-    await fs.copyFile(pagesConfigPath, pagesJsonPath)
+  // 用同步后的源配置重建生成物，保证首次启动时 pages.json 无重复路由、无残留页面。
+  if (existsSync(configPath)) {
+    await fs.copyFile(configPath, pagesJsonPath)
   }
 
   return cleanup
