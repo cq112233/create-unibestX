@@ -142,8 +142,15 @@ export async function prune(
 
   // 若未勾选 i18n，优雅降级 tabbar、navbar 和 store 状态桥接为纯中文直出
   if (!kept.has('i18n')) {
-    const tabbarI18nBridge = path.join(projectRoot, 'src/tabbar/internal/i18n.uts')
-    if (existsSync(tabbarI18nBridge)) {
+    // tabbar 重构后适配器位于 adapters/，旧分支仍在 internal/；两套目录都要兼容。
+    const tabbarI18nBridge = [
+      'src/tabbar/adapters/i18n.uts',
+      'src/tabbar/internal/i18n.uts',
+    ]
+      .map(rel => path.join(projectRoot, rel))
+      .find(candidate => existsSync(candidate))
+
+    if (tabbarI18nBridge !== undefined) {
       const code = `/**
  * TabBar 文本国际化桥接函数（纯中文无 i18n 模式）
  */
@@ -161,7 +168,7 @@ export function setTabbarItem(): void {
 }
 `
       await fs.writeFile(tabbarI18nBridge, code, 'utf-8')
-      replacedFiles.push('src/tabbar/internal/i18n.uts')
+      replacedFiles.push(path.relative(projectRoot, tabbarI18nBridge).replaceAll(path.sep, '/'))
     }
 
     const navbarI18nBridge = path.join(projectRoot, 'src/layouts/navbar/utils/i18n.uts')
@@ -290,10 +297,17 @@ export declare function useI18nStore(): {
       await fs.rm(themeDir, { recursive: true, force: true })
     }
 
-    // 1. 替换 src/tabbar/internal/theme.uts 为静态固定颜色（消除 theme.uts 与 useThemeStore 依赖）
-    const tabbarThemeBridge = path.join(projectRoot, 'src/tabbar/internal/theme.uts')
-    if (existsSync(tabbarThemeBridge)) {
-      const code = `import { ref } from 'vue';
+    // 1. 替换 TabBar theme 适配器为静态固定颜色（消除 theme 与 useThemeStore 依赖）
+    // tabbar 重构后适配器位于 adapters/，旧分支仍在 internal/；两套目录都要兼容。
+    const tabbarThemeBridge = [
+      'src/tabbar/adapters/theme.uts',
+      'src/tabbar/internal/theme.uts',
+    ]
+      .map(rel => path.join(projectRoot, rel))
+      .find(candidate => existsSync(candidate))
+
+    if (tabbarThemeBridge !== undefined) {
+      const code = `import { computed } from 'vue';
 
 export type ThemeTokens = {
   bgContent: string;
@@ -308,12 +322,12 @@ export type ThemeTokens = {
 /**
  * 当前是否为深色模式（静态默认浅色）
  */
-export const isDark = ref<boolean>(false);
+export const isDark = computed<boolean>((): boolean => false);
 
 /**
  * TabBar 主题样式令牌（静态单色）
  */
-export const themeTokens = ref<ThemeTokens>({
+export const themeTokens = computed((): ThemeTokens => ({
   bgContent: '#f5f6fa',
   navBg: '#ffffff',
   navText: '#000000',
@@ -321,15 +335,30 @@ export const themeTokens = ref<ThemeTokens>({
   tabBorder: '#e2e8f0',
   tabColor: '#94a3b8',
   tabSelected: '#37c2bc',
-});
+}));
 
 /**
  * TabBar 当前激活的高亮主题色
  */
-export const activeThemeColor = ref<string>('#37c2bc');
+export const activeThemeColor = computed<string>((): string => '#37c2bc');
 `
       await fs.writeFile(tabbarThemeBridge, code, 'utf-8')
-      replacedFiles.push('src/tabbar/internal/theme.uts')
+      replacedFiles.push(path.relative(projectRoot, tabbarThemeBridge).replaceAll(path.sep, '/'))
+    }
+
+    // 重构后的 hooks 从公共 theme 模块导入 ThemeTokens 类型；theme 被裁剪后改从本地适配器导入。
+    const tabbarThemeHook = path.join(projectRoot, 'src/tabbar/hooks/useTabbarTheme.uts')
+    if (existsSync(tabbarThemeHook)) {
+      let content = await fs.readFile(tabbarThemeHook, 'utf-8')
+      const next = content.replace(
+        /import\s+type\s*\{\s*ThemeTokens\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?/,
+        "import type { ThemeTokens } from '../adapters/theme.uts';",
+      )
+      if (next !== content) {
+        content = next
+        await fs.writeFile(tabbarThemeHook, content, 'utf-8')
+        replacedFiles.push('src/tabbar/hooks/useTabbarTheme.uts')
+      }
     }
 
     // 2. 替换 src/layouts/navbar/utils/theme.uts 为静态默认颜色
