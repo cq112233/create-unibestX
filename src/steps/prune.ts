@@ -11,7 +11,7 @@
  *    - i18n 未勾选时，将 TabBar、NavBar 和全局 Store 桥接重写为纯中文直出；
  * 5. 代码补丁与引用修改：应用 applyPatches 与 applyReplacements，剔除 main.uts 等入口文件的挂载代码；
  * 6. 路由表同步：清理 pages.config.json 中已删除页面路由和无效 easycom 组件规则，并据此重建 pages.json；
- * 7. 演示页面同步：自动清理 BasicView.uvue 和 FunctionView.uvue 中的废弃 Demo 入口按钮；
+ * 7. 演示页面同步：自动清理基础页和功能页中的废弃 Demo 入口按钮（兼容新旧 TabBar 结构）；
  * 8. 空目录清理：递归收敛已删空的文件夹，保持项目目录整洁。
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
@@ -113,6 +113,9 @@ export async function prune(
   replacements.push(...ALWAYS_PRUNE_FEATURE_ASSETS.replacements)
   removedDeps.push(...ALWAYS_PRUNE_FEATURE_ASSETS.removeDeps)
   removedScripts.push(...ALWAYS_PRUNE_FEATURE_ASSETS.removeScripts)
+
+  // tests/unit 只保留示例测试，其余测试及其辅助目录一律随生成物移除。
+  removeList.push(...await collectPrunableUnitTests(projectRoot))
 
   // ---------- 2. 删文件 ----------
   let uniqueRemovals = [...new Set(removeList)]
@@ -599,7 +602,7 @@ export declare function useThemeStore(): {
 
   // ---------- 8.5 同步基础页与功能页演示列表 ----------
   step('同步基础页与功能页演示列表')
-  await cleanViewDemoLists(projectRoot, warn)
+  await cleanPageDemoLists(projectRoot, warn)
 
   // ---------- 9. 清理代码生成物的残留 ----------
   step('清理 .d.uts.ts 残留与 gen-uts-dts 源清单')
@@ -723,6 +726,19 @@ function makeRemovalCheck(removed: string[]): (file: string) => boolean {
     const target = file.replace(/\\/g, '/')
     return normalized.some(rel => target === rel || target.startsWith(`${rel}/`))
   }
+}
+
+/** 收集 tests/unit 下除 example.test.ts 外的所有顶层文件与目录 */
+async function collectPrunableUnitTests(projectRoot: string): Promise<string[]> {
+  const unitTestDir = path.join(projectRoot, 'tests', 'unit')
+  if (!existsSync(unitTestDir)) {
+    return []
+  }
+
+  const entries = await fs.readdir(unitTestDir, { withFileTypes: true })
+  return entries
+    .filter(entry => entry.name !== 'example.test.ts')
+    .map(entry => path.relative(projectRoot, path.join(unitTestDir, entry.name)).replaceAll(path.sep, '/'))
 }
 
 function subPagePath(root: string, pagePath: string): string {
@@ -889,22 +905,26 @@ export async function syncRouteConfigs(
   return cleanup
 }
 
-async function cleanViewDemoLists(
+async function cleanPageDemoLists(
   projectRoot: string,
   warn: (msg: string) => void,
 ): Promise<void> {
-  const views = [
+  // TabBar 重构后页面内容已直接写回 basic.uvue / function.uvue，
+  // 旧分支仍把内容放在 views/*.uvue；两套路径都检查，避免跨分支生成时漏清 Demo。
+  const pages = [
+    'src/pages/basic/basic.uvue',
+    'src/pages/function/function.uvue',
     'src/pages/basic/views/BasicView.uvue',
     'src/pages/function/views/FunctionView.uvue',
   ]
 
-  for (const relView of views) {
-    const absView = path.join(projectRoot, relView)
-    if (!existsSync(absView)) {
+  for (const relPage of pages) {
+    const absPage = path.join(projectRoot, relPage)
+    if (!existsSync(absPage)) {
       continue
     }
 
-    const content = await fs.readFile(absView, 'utf-8')
+    const content = await fs.readFile(absPage, 'utf-8')
     let nextContent = content
     let hasChanges = false
     const demoListMatch = content.match(/const demoList:[^=]+=\s*\[([\s\S]*?)\];/)
@@ -928,7 +948,7 @@ async function cleanViewDemoLists(
     }
 
     if (hasChanges) {
-      await fs.writeFile(absView, nextContent, 'utf-8')
+      await fs.writeFile(absPage, nextContent, 'utf-8')
     }
   }
 }

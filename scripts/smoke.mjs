@@ -6,7 +6,7 @@
  *   1. 跑一遍 `doctor`，断言 0 错误 —— 这是「删干净了」的可信证据；
  *   2. 断言关键文件在/不在；
  *   3. 断言 `pages.config.json` 里没有指向已删文件的残留路由；
- *   4. 断言生成物里没有明文凭据。
+ *   4. 断言 package.json 保留模板版本且没有明文凭据。
  *
  * 不装依赖（`--no-install`）：依赖安装慢且与裁剪正确性无关。
  *
@@ -14,7 +14,7 @@
  *   node scripts/smoke.mjs            # 跑全部用例
  *   node scripts/smoke.mjs full       # 只跑名字含 full 的用例
  */
-import { execFile } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -256,11 +256,11 @@ const CASES = [
 /**
  * `src/api` 的保留断言（回归防护）
  *
- * src/api 是项目的接口层，**整个目录都不参与裁剪**，与勾不勾 httpDemo 无关：
+ * src/api 的业务接口文件不参与裁剪，与勾不勾 httpDemo 无关；
+ * `src/api/generated` 则是 OpenAPI 示例生成物，单独通过 ALWAYS_PRUNED_ASSETS 裁掉：
  *   - auth/    —— 被 src/http/refresh.uts 与 src/sub/auth/login.uvue 依赖（均永久保留）
  *   - privacy/ —— 被 src/sub/privacy/privacy.uvue 依赖（该分包不在裁剪清单里，永不删除）
- *   - example  —— 虽是 httpDemo 的示例接口，但 tests/unit/api/api.test.ts 也 import 它
- * 以及 tests/unit/api/api.test.ts。
+ *   - example  —— httpDemo 使用的示例接口，属于业务接口层。
  *
  * 曾经 httpDemo 的 extraRemovePaths 写成整目录 'src/api'，于是不勾 httpDemo 时
  * 把 auth/privacy 一起删掉，生成物直接爆一堆悬空 import。这里对**每一个用例**
@@ -273,7 +273,6 @@ const API_ASSETS_ALWAYS_KEPT = [
   'src/api/auth/auth.uts',
   'src/api/privacy/privacy.uts',
   'src/api/example.uts',
-  'tests/unit/api/api.test.ts',
 ];
 
 for (const testCase of CASES) {
@@ -305,6 +304,59 @@ const DELIVERABLES_ALWAYS_KEPT = [
 
 for (const testCase of CASES) {
   testCase.expectPresent.push(...DELIVERABLES_ALWAYS_KEPT);
+}
+
+/** 判断所选模板分支是否真的带有某个路径（目录也可） */
+const BRANCH_PATH_CACHE = new Map();
+function branchHasPath(rel) {
+  if (BRANCH_PATH_CACHE.has(rel)) {
+    return BRANCH_PATH_CACHE.get(rel);
+  }
+  let exists = false;
+  try {
+    execFileSync('git', ['-C', REPO_ROOT, 'cat-file', '-e', `${BRANCH}:${rel}`], { stdio: 'ignore' });
+    exists = true;
+  }
+  catch {
+    exists = false;
+  }
+  BRANCH_PATH_CACHE.set(rel, exists);
+  return exists;
+}
+
+/** 读取模板分支声明的版本号；生成物必须保留这个值，而不是由脚手架覆盖 */
+function readBranchPackageVersion() {
+  const raw = execFileSync('git', ['-C', REPO_ROOT, 'show', `${BRANCH}:package.json`], { encoding: 'utf8' });
+  return JSON.parse(raw).version;
+}
+
+// 模板各分支的测试与工具链布局会演进（例如 main 已移除 tests/unit/api 与 rxjs-lite）。
+// 只断言该分支实际承诺交付的资产，避免把「旧分支专属文件」误当成所有分支的硬约束。
+for (const testCase of CASES) {
+  testCase.expectPresent = testCase.expectPresent.filter(rel => branchHasPath(rel));
+}
+
+/** 无论功能怎么勾选都必须裁掉的模板示例资产 */
+const ALWAYS_PRUNED_ASSETS = [
+  'src/api/generated',
+  'src/sub/httpBasicDemo',
+  'tests/unit/plugins',
+  'tests/unit/tabbar',
+];
+
+for (const testCase of CASES) {
+  for (const rel of ALWAYS_PRUNED_ASSETS) {
+    if (branchHasPath(rel)) {
+      testCase.expectAbsent.push(rel);
+    }
+  }
+}
+
+// 示例测试是 tests/unit 下唯一允许保留的内容。
+for (const testCase of CASES) {
+  if (branchHasPath('tests/unit/example.test.ts')) {
+    testCase.expectPresent.push('tests/unit/example.test.ts');
+  }
 }
 
 /**
@@ -458,6 +510,68 @@ function checkDependencies(projectDir) {
       problems.push(`package.json 声明了未安装的依赖 ${name}`);
     }
   }
+  return problems;
+}
+
+/**
+ * 校验基础页 / 功能页里的 Demo 入口是否仍指向存在的分包。
+ *
+ * TabBar 重构后页面内容已从 `views/*View.uvue` 搬回 `basic.uvue` / `function.uvue`；
+ * 如果裁剪逻辑漏改，分包被删了但卡片还在，运行时会点进不存在的路由。
+ * 同时兼容旧分支的 views 结构。
+ */
+function checkDemoEntries(projectDir) {
+  const problems = [];
+  const pages = [
+    'src/pages/basic/basic.uvue',
+    'src/pages/function/function.uvue',
+    'src/pages/basic/views/BasicView.uvue',
+    'src/pages/function/views/FunctionView.uvue',
+  ];
+
+  for (const rel of pages) {
+    const abs = path.join(projectDir, rel);
+    if (!fs.existsSync(abs)) {
+      continue;
+    }
+    const content = fs.readFileSync(abs, 'utf8');
+    const block = content.match(/const demoList:[^=]+=\s*\[([\s\S]*?)\];/)?.[1] ?? '';
+    const re = /path:\s*['"]([^'"]+)['"]/g;
+    let match;
+    while ((match = re.exec(block)) !== null) {
+      const target = match[1].replace(/^\//, '');
+      if (!fs.existsSync(path.join(projectDir, `${target}.uvue`))
+        && !fs.existsSync(path.join(projectDir, path.dirname(target)))) {
+        problems.push(`${rel}: Demo 入口指向已删除的 ${match[1]}`);
+      }
+    }
+  }
+  return problems;
+}
+
+/** tests/unit 下只允许 example.test.ts，其余文件均为裁剪残留 */
+function checkUnitTests(projectDir) {
+  const unitDir = path.join(projectDir, 'tests', 'unit');
+  const problems = [];
+  if (!fs.existsSync(unitDir)) {
+    return problems;
+  }
+
+  function walk(dir) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const abs = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        walk(abs);
+        continue;
+      }
+      const rel = path.relative(unitDir, abs).replaceAll(path.sep, '/');
+      if (rel !== 'example.test.ts') {
+        problems.push(`tests/unit/${rel} 未被裁剪`);
+      }
+    }
+  }
+
+  walk(unitDir);
   return problems;
 }
 
@@ -827,6 +941,16 @@ async function runCase(testCase, tempRoot) {
     }
   }
 
+  // 2a. package.json 版本跟随模板，脚手架只改项目名与依赖配置
+  const expectedVersion = readBranchPackageVersion();
+  const generatedPkg = JSON.parse(fs.readFileSync(path.join(projectDir, 'package.json'), 'utf8'));
+  if (generatedPkg.version === expectedVersion) {
+    record(testCase.name, true, `package.json 保留模板版本 ${expectedVersion}`);
+  }
+  else {
+    record(testCase.name, false, `package.json 版本应为 ${expectedVersion}，实际为 ${generatedPkg.version}`);
+  }
+
   // 2b. 文件内容断言
   for (const assertion of testCase.fileAssertions ?? []) {
     const abs = path.join(projectDir, assertion.file);
@@ -855,6 +979,20 @@ async function runCase(testCase, tempRoot) {
 
   // 3. 路由与依赖一致性
   for (const problem of checkRouteConfig(projectDir)) {
+    record(testCase.name, false, problem);
+  }
+  const demoProblems = checkDemoEntries(projectDir);
+  if (demoProblems.length === 0) {
+    record(testCase.name, true, 'Demo 入口均指向存在的分包');
+  }
+  for (const problem of demoProblems) {
+    record(testCase.name, false, problem);
+  }
+  const unitTestProblems = checkUnitTests(projectDir);
+  if (unitTestProblems.length === 0) {
+    record(testCase.name, true, 'tests/unit 仅保留 example.test.ts');
+  }
+  for (const problem of unitTestProblems) {
     record(testCase.name, false, problem);
   }
   // 3a. theme 降级残留

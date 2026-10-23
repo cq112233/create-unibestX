@@ -36,6 +36,8 @@ export const FEATURES: Feature[] = [
  *   不再随项目交付；
  * - 三者都只被各自的演示页引用（签名看板插件仅 signatureFunctionDemo import），
  *   删掉不会影响其它页面。
+ * - `src/api/generated` 是 OpenAPI 示例生成物；唯一引用它的 httpBasicDemo 也一并
+ *   裁掉，避免生成目录缺失后留下悬空 import。需要时仍可通过 `pnpm api:gen` 重建。
  */
 export const ALWAYS_PRUNE_FEATURE_ASSETS = {
   removePaths: [
@@ -44,6 +46,8 @@ export const ALWAYS_PRUNE_FEATURE_ASSETS = {
     'src/sub/deviceFunctionDemo',
     'src/components/NestedScroll',
     'src/sub/nestedScrollFunctionDemo',
+    'src/api/generated',
+    'src/sub/httpBasicDemo',
   ] as string[],
   replacements: [] as Replacement[],
   replaceFiles: {} as Record<string, string>,

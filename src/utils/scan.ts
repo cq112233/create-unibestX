@@ -40,46 +40,65 @@ const BUILTIN_TAGS = new Set([
 export function stripComments(input: string): string {
   let out = ''
   let quote: string | null = null
+  let inScript = false
+  let inStyle = false
 
   for (let i = 0; i < input.length; i++) {
     const ch = input[i]!
     const next = input[i + 1]
 
-    if (quote !== null) {
-      out += ch
-      if (ch === '\\') {
-        out += next ?? ''
-        i++
+    // 模板文本里的 `src/sub/*`、URL 等不是注释；只在 script/style 区块内识别
+    // 行注释与块注释，避免把整段模板/脚本误吞掉。
+    if (inScript || inStyle) {
+      if (quote !== null) {
+        out += ch
+        if (ch === '\\') {
+          out += next ?? ''
+          i++
+        }
+        else if (ch === quote) {
+          quote = null
+        }
+        continue
       }
-      else if (ch === quote) {
-        quote = null
+
+      if (ch === '\'' || ch === '"' || ch === '`') {
+        quote = ch
+        out += ch
+        continue
       }
-      continue
-    }
 
-    if (ch === '\'' || ch === '"' || ch === '`') {
-      quote = ch
-      out += ch
-      continue
-    }
-
-    if (ch === '/' && next === '/') {
-      while (i < input.length && input[i] !== '\n') {
-        i++
+      if (ch === '/' && next === '/') {
+        while (i < input.length && input[i] !== '\n') {
+          i++
+        }
+        out += '\n'
+        continue
       }
-      out += '\n'
-      continue
-    }
 
-    if (ch === '/' && next === '*') {
-      i += 2
-      while (i < input.length && !(input[i] === '*' && input[i + 1] === '/')) {
-        if (input[i] === '\n') {
-          out += '\n'
+      if (ch === '/' && next === '*') {
+        i += 2
+        while (i < input.length && !(input[i] === '*' && input[i + 1] === '/')) {
+          if (input[i] === '\n') {
+            out += '\n'
+          }
+          i++
         }
         i++
+        continue
       }
-      i++
+
+      if (ch === '<') {
+        const tag = input.slice(i, i + 9).toLowerCase()
+        if (inScript && tag.startsWith('</script')) {
+          inScript = false
+        }
+        else if (inStyle && tag.startsWith('</style')) {
+          inStyle = false
+        }
+      }
+
+      out += ch
       continue
     }
 
@@ -93,6 +112,16 @@ export function stripComments(input: string): string {
       }
       i = stop - 1
       continue
+    }
+
+    if (ch === '<') {
+      const tag = input.slice(i, i + 7).toLowerCase()
+      if (tag.startsWith('<script')) {
+        inScript = true
+      }
+      else if (tag.startsWith('<style')) {
+        inStyle = true
+      }
     }
 
     out += ch

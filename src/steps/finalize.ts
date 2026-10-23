@@ -3,7 +3,7 @@
  *
  * 负责在裁剪与自检通过后，对新生成项目的工程配置文件进行最终规范化同步：
  * 1. 更新 package.json：
- *    - 将 name 改为用户指定的项目名，重置 version 为 1.0.0；
+ *    - 将 name 改为用户指定的项目名，保留模板原有的 version；
  *    - 移除已裁剪功能关联的依赖项（dependencies / devDependencies）与 scripts 脚本；
  *    - 写入 unibestx 官方元数据对象（记录本次生成所勾选的功能、UI 库、模板分支、
  *      模块清理策略、时间戳与 CLI 版本）；
@@ -82,7 +82,6 @@ async function rewritePackageJson(
   const pkg = await readJson<Record<string, any>>(abs)
 
   pkg.name = options.projectName
-  pkg.version = '1.0.0'
 
   for (const dep of pruneResult.removedDeps) {
     delete pkg.dependencies?.[dep]
