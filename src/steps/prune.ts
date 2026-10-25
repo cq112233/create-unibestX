@@ -561,6 +561,42 @@ export declare function useThemeStore(): {
       await fs.writeFile(storeDts, storeDtsContent, 'utf-8')
     }
 
+    // 10. 适配 src/sub/htmlBasicDemo/htmlBasicDemo.uvue：剥离对 @/src/theme/index.uts 与 useThemeStore 的依赖
+    const htmlDemoPath = path.join(projectRoot, 'src/sub/htmlBasicDemo/htmlBasicDemo.uvue')
+    if (existsSync(htmlDemoPath)) {
+      let content = await fs.readFile(htmlDemoPath, 'utf-8')
+      content = content.replace(
+        /import\s*\{\s*activeThemeColor,\s*darkThemeColor,\s*THEME_COLOR_PRESETS,\s*themeColor\s*\}\s*from\s*['"]@\/src\/theme\/index\.uts['"];?\r?\n?/,
+        `// 静态主题色变量（无 theme 模式）
+const activeThemeColor = '#37c2bc';
+const darkThemeColor = '#2ba8a2';
+const themeColor = computed((): string => '#37c2bc');
+const THEME_COLOR_PRESETS = ['#37c2bc', '#3b82f6', '#8b5cf6', '#ec4899', '#f97316', '#10b981'];
+`,
+      )
+      content = content
+        .replace(/const\s+themeStore\s*=\s*useThemeStore\(\);?\r?\n?/, '')
+        .replace(
+          /const\s+isDark\s*=\s*computed\(\(\):\s*boolean\s*=>\s*\{[\s\S]*?return\s+themeStore\.state\.isDark;?\r?\n\s*\}\);?/,
+          'const isDark = computed((): boolean => false);',
+        )
+        .replace(
+          /const\s+currentMode\s*=\s*computed\(\(\):\s*string\s*=>\s*\{[\s\S]*?return\s+themeStore\.state\.themeMode;?\r?\n\s*\}\);?/,
+          'const currentMode = computed((): string => \'light\');',
+        )
+        .replace(
+          /function\s+toggleMode\([^)]*\):\s*void\s*\{[\s\S]*?themeStore\.setThemeMode\([^)]*\);?\r?\n\s*\}/,
+          'function toggleMode(_mode: string): void {}',
+        )
+        .replace(
+          /function\s+selectTheme\([^)]*\):\s*void\s*\{[\s\S]*?themeStore\.setTheme\([^)]*\);?\r?\n\s*\}/,
+          'function selectTheme(_color: string): void {}',
+        )
+      content = stripStoreImport(content, 'useThemeStore')
+      await fs.writeFile(htmlDemoPath, content, 'utf-8')
+      replacedFiles.push('src/sub/htmlBasicDemo/htmlBasicDemo.uvue')
+    }
+
 
     // 11. 替换 pages.config.json 与 pages.json 中的 @theme 变量为静态浅色值
     for (const pagesFile of ['pages.config.json', 'pages.json']) {
